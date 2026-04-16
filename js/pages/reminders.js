@@ -198,6 +198,73 @@ function openReminderForm(reminder) {
   });
 }
 
+export function openReminderDetail(id) {
+  const reminder = getAll('reminders').find(r => r.id === id);
+  if (!reminder) return;
+
+  const clients = getAll('clients');
+  const properties = getAll('properties');
+  const client = reminder.clientId ? clients.find(c => c.id === reminder.clientId) : null;
+  const property = reminder.propertyId ? properties.find(p => p.id === reminder.propertyId) : null;
+
+  const typeLabels = { call: TR.reminder.call, meeting: TR.reminder.meeting, follow_up: TR.reminder.followUp, viewing: TR.reminder.viewing, other: TR.reminder.other };
+
+  const body = `
+    <div class="detail-reminder">
+      <div class="reminder-detail-row">
+        <span class="detail-label">Başlık</span>
+        <span class="detail-value">${reminder.title}</span>
+      </div>
+      <div class="reminder-detail-row">
+        <span class="detail-label">Tür</span>
+        <span class="detail-value">${typeLabels[reminder.type] || reminder.type}</span>
+      </div>
+      <div class="reminder-detail-row">
+        <span class="detail-label">Tarih/Saat</span>
+        <span class="detail-value">${formatDateTime(reminder.dueDate)}</span>
+      </div>
+      <div class="reminder-detail-row">
+        <span class="detail-label">Durum</span>
+        <span class="detail-value">${statusBadge(reminder.status)}</span>
+      </div>
+      ${client ? `<div class="reminder-detail-row">
+        <span class="detail-label">Müşteri</span>
+        <span class="detail-value"><a href="#/clients/${client.id}" class="link-detail">${client.firstName} ${client.lastName}</a></span>
+      </div>` : ''}
+      ${property ? `<div class="reminder-detail-row">
+        <span class="detail-label">İlan</span>
+        <span class="detail-value"><a href="#/properties/${property.id}" class="link-detail">${property.title}</a></span>
+      </div>` : ''}
+      ${reminder.notes ? `<div class="reminder-detail-row">
+        <span class="detail-label">Notlar</span>
+        <span class="detail-value">${reminder.notes}</span>
+      </div>` : ''}
+    </div>
+  `;
+
+  const footer = `
+    ${reminder.status !== 'completed' ? `<button class="btn btn-success" id="detail-complete"><i data-lucide="check"></i> Tamamlandı</button>` : ''}
+    <button class="btn btn-outline" id="detail-edit"><i data-lucide="pencil"></i> Düzenle</button>
+  `;
+
+  const modal = createModal('reminder-detail-modal', 'Hatırlatıcı Detayı', body, footer);
+  openModal('reminder-detail-modal');
+
+  modal.querySelector('#detail-complete')?.addEventListener('click', () => {
+    const all = getAll('reminders').map(r => r.id === id ? { ...r, status: 'completed' } : r);
+    saveAll('reminders', all);
+    closeModal('reminder-detail-modal');
+    showToast('Tamamlandı olarak işaretlendi');
+    if (document.getElementById('reminders-list')) renderList();
+  });
+
+  modal.querySelector('#detail-edit')?.addEventListener('click', () => {
+    closeModal('reminder-detail-modal');
+    const updated = getAll('reminders').find(r => r.id === id);
+    if (updated) openReminderForm(updated);
+  });
+}
+
 // Browser notification checker (called from app.js)
 export function checkReminders() {
   if (!('Notification' in window)) return;

@@ -75,14 +75,14 @@ export function renderDashboard(container) {
           ${upcoming.length ? upcoming.map(r => {
             const c = r.clientId ? clients.find(x => x.id === r.clientId) : null;
             const overdue = new Date(r.dueDate) < new Date();
-            return `<div class="activity-item">
+            return `<a href="#/reminders/${r.id}" class="activity-item activity-item-link">
               <div class="activity-icon ${overdue ? 'overdue' : ''}"><i data-lucide="bell"></i></div>
               <div class="activity-content">
                 <div class="activity-title">${r.title}</div>
                 <div class="activity-meta">${formatDate(r.dueDate)} ${c ? '· ' + c.firstName + ' ' + c.lastName : ''}</div>
               </div>
-              ${overdue ? '<span class="badge badge-danger">Gecikti</span>' : ''}
-            </div>`;
+              ${overdue ? '<span class="badge badge-danger">Gecikti</span>' : '<i data-lucide="chevron-right" class="activity-arrow"></i>'}
+            </a>`;
           }).join('') : `<p class="text-muted">${TR.dashboard.noReminders}</p>`}
         </div>
       </div>

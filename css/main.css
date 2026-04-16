@@ -439,6 +439,23 @@ img { max-width: 100%; }
 .chart-card .card-body { display: flex; justify-content: center; }
 .chart-card canvas { max-height: 220px; }
 
+.activity-item-link {
+  cursor: pointer;
+  text-decoration: none;
+  transition: background var(--transition);
+  border-radius: var(--radius-sm);
+  margin: 0 -.5rem;
+  padding-left: .5rem;
+  padding-right: .5rem;
+}
+.activity-item-link:hover { background: var(--bg-hover); }
+.activity-arrow { width: 14px; height: 14px; color: var(--color-text-muted); flex-shrink: 0; margin-left: auto; }
+.detail-reminder { display: flex; flex-direction: column; gap: .75rem; }
+.reminder-detail-row { display: flex; gap: 1rem; align-items: baseline; }
+.reminder-detail-row .detail-label { font-size: .75rem; color: var(--color-text-muted); width: 80px; flex-shrink: 0; }
+.reminder-detail-row .detail-value { font-size: .875rem; font-weight: 500; }
+.link-detail { color: var(--color-primary); text-decoration: underline; }
+.link-detail:hover { opacity: .8; }
 .activity-item {
   display: flex; align-items: flex-start; gap: .75rem;
   padding: .6rem 0;
