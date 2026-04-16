@@ -14,6 +14,19 @@ export function renderSettings(container) {
 
     <div class="settings-grid">
       <div class="card">
+        <div class="card-header"><h3>Danışman Bilgileri</h3></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>Danışman Adı <span class="form-hint">(Not geçmişinde görünür)</span></label>
+            <div style="display:flex;gap:.75rem;align-items:center">
+              <input type="text" id="user-name-input" class="input-field" value="${settings.userName||''}" placeholder="Adınızı girin" style="max-width:300px">
+              <button class="btn btn-primary" id="btn-save-username"><i data-lucide="save"></i> Kaydet</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-header"><h3>${TR.settings.storageUsage}</h3></div>
         <div class="card-body">
           <div class="storage-bar">
@@ -67,6 +80,15 @@ export function renderSettings(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons();
+
+  document.getElementById('btn-save-username').addEventListener('click', () => {
+    const name = document.getElementById('user-name-input').value.trim();
+    if (!name) { showToast('Lütfen bir ad girin', 'error'); return; }
+    const s = getSettings();
+    s.userName = name;
+    saveSettings(s);
+    showToast('Danışman adı kaydedildi');
+  });
 
   document.querySelectorAll('.default-weight-slider').forEach(s => {
     s.addEventListener('input', () => {

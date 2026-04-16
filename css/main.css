@@ -456,6 +456,32 @@ img { max-width: 100%; }
 .reminder-detail-row .detail-value { font-size: .875rem; font-weight: 500; }
 .link-detail { color: var(--color-primary); text-decoration: underline; }
 .link-detail:hover { opacity: .8; }
+
+/* Note log */
+.note-log-section { margin-top: 1.25rem; border-top: 1px solid var(--color-border); padding-top: 1rem; }
+.note-log-header, .add-note-header {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .8rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .05em; color: var(--color-text-muted);
+  margin-bottom: .75rem;
+}
+.note-log-header i, .add-note-header i { width: 14px; height: 14px; }
+.note-log-list { display: flex; flex-direction: column; gap: .6rem; max-height: 200px; overflow-y: auto; }
+.note-log-item {
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  padding: .6rem .75rem;
+  border-left: 3px solid var(--color-primary);
+}
+.note-log-meta {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .72rem; color: var(--color-text-muted); margin-bottom: .35rem;
+}
+.note-log-meta i { width: 12px; height: 12px; }
+.note-log-author { font-weight: 700; color: var(--color-text); }
+.note-log-time { margin-left: auto; }
+.note-log-text { font-size: .85rem; line-height: 1.5; }
+.add-note-section { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; }
 .activity-item {
   display: flex; align-items: flex-start; gap: .75rem;
   padding: .6rem 0;

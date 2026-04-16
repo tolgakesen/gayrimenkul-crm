@@ -109,11 +109,8 @@ export function renderDashboard(container) {
 
   container.querySelectorAll('[data-reminder-id]').forEach(el => {
     el.addEventListener('click', async () => {
-      const id = el.dataset.reminderId;
-      const reminder = getAll('reminders').find(r => r.id === id);
-      if (!reminder) return;
-      const { openReminderForm } = await import('./reminders.js');
-      openReminderForm(reminder);
+      const { openReminderDetail } = await import('./reminders.js');
+      openReminderDetail(el.dataset.reminderId);
     });
   });
 }

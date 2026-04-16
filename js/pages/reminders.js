@@ -1,6 +1,6 @@
 import { TR } from '../i18n.js';
-import { getAll, saveAll, logActivity } from '../storage.js';
-import { uuid, formatDateTime, showToast, confirm, isOverdue } from '../utils.js';
+import { getAll, saveAll, logActivity, getSettings } from '../storage.js';
+import { uuid, formatDateTime, formatDate, showToast, confirm, isOverdue } from '../utils.js';
 import { createModal, openModal, closeModal } from '../components/modals.js';
 
 let filterStatus = '';
@@ -198,57 +198,85 @@ export function openReminderForm(reminder) {
   });
 }
 
+function noteLogItemHTML(n) {
+  return `<div class="note-log-item">
+    <div class="note-log-meta">
+      <i data-lucide="user-circle"></i>
+      <span class="note-log-author">${n.createdBy}</span>
+      <span class="note-log-time">${formatDateTime(n.createdAt)}</span>
+    </div>
+    <div class="note-log-text">${n.text}</div>
+  </div>`;
+}
+
 export function openReminderDetail(id) {
   const reminder = getAll('reminders').find(r => r.id === id);
   if (!reminder) return;
 
+  const settings = getSettings();
+  const userName = settings.userName || 'Danışman';
   const clients = getAll('clients');
   const properties = getAll('properties');
   const client = reminder.clientId ? clients.find(c => c.id === reminder.clientId) : null;
   const property = reminder.propertyId ? properties.find(p => p.id === reminder.propertyId) : null;
-
   const typeLabels = { call: TR.reminder.call, meeting: TR.reminder.meeting, follow_up: TR.reminder.followUp, viewing: TR.reminder.viewing, other: TR.reminder.other };
+  const noteLog = reminder.noteLog || [];
 
   const body = `
     <div class="detail-reminder">
-      <div class="reminder-detail-row">
-        <span class="detail-label">Başlık</span>
-        <span class="detail-value">${reminder.title}</span>
+      <div class="reminder-detail-row"><span class="detail-label">Başlık</span><span class="detail-value">${reminder.title}</span></div>
+      <div class="reminder-detail-row"><span class="detail-label">Tür</span><span class="detail-value">${typeLabels[reminder.type] || reminder.type}</span></div>
+      <div class="reminder-detail-row"><span class="detail-label">Tarih/Saat</span><span class="detail-value">${formatDateTime(reminder.dueDate)}</span></div>
+      <div class="reminder-detail-row"><span class="detail-label">Durum</span><span class="detail-value">${statusBadge(reminder.status)}</span></div>
+      ${client ? `<div class="reminder-detail-row"><span class="detail-label">Müşteri</span><span class="detail-value">${client.firstName} ${client.lastName}</span></div>` : ''}
+      ${property ? `<div class="reminder-detail-row"><span class="detail-label">İlan</span><span class="detail-value">${property.title}</span></div>` : ''}
+      ${reminder.notes ? `<div class="reminder-detail-row"><span class="detail-label">Not</span><span class="detail-value">${reminder.notes}</span></div>` : ''}
+    </div>
+
+    <div class="note-log-section">
+      <div class="note-log-header"><i data-lucide="message-square"></i> Not Geçmişi</div>
+      <div id="note-log-list" class="note-log-list">
+        ${noteLog.length ? noteLog.map(n => noteLogItemHTML(n)).join('') : '<p class="text-muted note-log-empty">Henüz ek not eklenmemiş.</p>'}
       </div>
-      <div class="reminder-detail-row">
-        <span class="detail-label">Tür</span>
-        <span class="detail-value">${typeLabels[reminder.type] || reminder.type}</span>
-      </div>
-      <div class="reminder-detail-row">
-        <span class="detail-label">Tarih/Saat</span>
-        <span class="detail-value">${formatDateTime(reminder.dueDate)}</span>
-      </div>
-      <div class="reminder-detail-row">
-        <span class="detail-label">Durum</span>
-        <span class="detail-value">${statusBadge(reminder.status)}</span>
-      </div>
-      ${client ? `<div class="reminder-detail-row">
-        <span class="detail-label">Müşteri</span>
-        <span class="detail-value"><a href="#/clients/${client.id}" class="link-detail">${client.firstName} ${client.lastName}</a></span>
-      </div>` : ''}
-      ${property ? `<div class="reminder-detail-row">
-        <span class="detail-label">İlan</span>
-        <span class="detail-value"><a href="#/properties/${property.id}" class="link-detail">${property.title}</a></span>
-      </div>` : ''}
-      ${reminder.notes ? `<div class="reminder-detail-row">
-        <span class="detail-label">Notlar</span>
-        <span class="detail-value">${reminder.notes}</span>
-      </div>` : ''}
+    </div>
+
+    <div class="add-note-section">
+      <div class="add-note-header"><i data-lucide="plus-circle"></i> Yeni Not Ekle</div>
+      <textarea id="new-note-text" rows="3" class="textarea-input" placeholder="Notunuzu buraya yazın..."></textarea>
     </div>
   `;
 
   const footer = `
+    <button class="btn btn-primary" id="btn-save-note"><i data-lucide="save"></i> Notu Kaydet</button>
     ${reminder.status !== 'completed' ? `<button class="btn btn-success" id="detail-complete"><i data-lucide="check"></i> Tamamlandı</button>` : ''}
-    <button class="btn btn-outline" id="detail-edit"><i data-lucide="pencil"></i> Düzenle</button>
   `;
 
-  const modal = createModal('reminder-detail-modal', 'Hatırlatıcı Detayı', body, footer);
+  const modal = createModal('reminder-detail-modal', reminder.title, body, footer);
   openModal('reminder-detail-modal');
+  if (window.lucide) window.lucide.createIcons();
+
+  modal.querySelector('#btn-save-note').addEventListener('click', () => {
+    const text = modal.querySelector('#new-note-text').value.trim();
+    if (!text) { showToast('Lütfen bir not girin', 'error'); return; }
+
+    const entry = { id: uuid(), text, createdAt: new Date().toISOString(), createdBy: userName };
+    const reminders = getAll('reminders');
+    const idx = reminders.findIndex(r => r.id === id);
+    if (idx >= 0) {
+      if (!reminders[idx].noteLog) reminders[idx].noteLog = [];
+      reminders[idx].noteLog.push(entry);
+      saveAll('reminders', reminders);
+    }
+
+    modal.querySelector('#new-note-text').value = '';
+    const logList = modal.querySelector('#note-log-list');
+    const emptyMsg = logList.querySelector('.note-log-empty');
+    if (emptyMsg) emptyMsg.remove();
+    logList.insertAdjacentHTML('beforeend', noteLogItemHTML(entry));
+    if (window.lucide) window.lucide.createIcons();
+    logList.scrollTop = logList.scrollHeight;
+    showToast('Not eklendi');
+  });
 
   modal.querySelector('#detail-complete')?.addEventListener('click', () => {
     const all = getAll('reminders').map(r => r.id === id ? { ...r, status: 'completed' } : r);
@@ -256,12 +284,6 @@ export function openReminderDetail(id) {
     closeModal('reminder-detail-modal');
     showToast('Tamamlandı olarak işaretlendi');
     if (document.getElementById('reminders-list')) renderList();
-  });
-
-  modal.querySelector('#detail-edit')?.addEventListener('click', () => {
-    closeModal('reminder-detail-modal');
-    const updated = getAll('reminders').find(r => r.id === id);
-    if (updated) openReminderForm(updated);
   });
 }
 
