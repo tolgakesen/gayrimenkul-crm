@@ -12,8 +12,10 @@ export function renderDashboard(container) {
 
   const active = properties.filter(p => p.status === 'active').length;
   const pending = reminders.filter(r => r.status === 'pending').length;
+  const now = new Date();
+  const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const upcoming = reminders
-    .filter(r => r.status === 'pending')
+    .filter(r => r.status === 'pending' && new Date(r.dueDate) <= in24h)
     .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
     .slice(0, 5);
 

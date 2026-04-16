@@ -145,6 +145,10 @@ function openClientForm(client) {
           </div>
         </div>
         <div class="form-group"><label>${TR.client.firstMeetingDate}</label><input type="date" name="firstMeetingDate" value="${client?.firstMeetingDate||''}" class="input-field"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Meslek</label><input type="text" name="occupation" value="${client?.occupation||''}" class="input-field" placeholder="Örn: Mühendis"></div>
+          <div class="form-group"><label>Doğum Günü</label><input type="date" name="birthday" value="${client?.birthday||''}" class="input-field"></div>
+        </div>
         <div class="form-group"><label>${TR.client.notes}</label><textarea name="notes" rows="2" class="textarea-input">${client?.notes||''}</textarea></div>
       </div>
 
@@ -288,6 +292,8 @@ function saveClient(modal, editId) {
     phone: get('phone')?.trim(),
     email: get('email')?.trim(),
     notes: get('notes'),
+    occupation: get('occupation')?.trim() || null,
+    birthday: get('birthday') || null,
     budgetMin: parseFloat(get('budgetMin')) || null,
     budgetMax: parseFloat(get('budgetMax')) || null,
     preferredDistricts, preferredNeighborhoods,
@@ -355,6 +361,8 @@ export function openClientDetail(id) {
             ${dRow('İlk Görüşme', formatDate(client.firstMeetingDate))}
             ${dRow('Kredi Durumu', client.creditStatus||'—')}
             ${dRow('Beyan Gelir', client.declaredIncome ? formatPrice(client.declaredIncome)+'/ay' : '—')}
+            ${dRow('Meslek', client.occupation||'—')}
+            ${dRow('Doğum Günü', formatDate(client.birthday))}
           </div>
           ${client.notes ? `<div class="notes-box"><strong>Not:</strong> ${client.notes}</div>` : ''}
         </div>
