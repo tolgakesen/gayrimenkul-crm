@@ -75,14 +75,14 @@ export function renderDashboard(container) {
           ${upcoming.length ? upcoming.map(r => {
             const c = r.clientId ? clients.find(x => x.id === r.clientId) : null;
             const overdue = new Date(r.dueDate) < new Date();
-            return `<a href="#/reminders/${r.id}" class="activity-item activity-item-link">
+            return `<div class="activity-item activity-item-link" data-reminder-id="${r.id}">
               <div class="activity-icon ${overdue ? 'overdue' : ''}"><i data-lucide="bell"></i></div>
               <div class="activity-content">
                 <div class="activity-title">${r.title}</div>
                 <div class="activity-meta">${formatDate(r.dueDate)} ${c ? '· ' + c.firstName + ' ' + c.lastName : ''}</div>
               </div>
               ${overdue ? '<span class="badge badge-danger">Gecikti</span>' : '<i data-lucide="chevron-right" class="activity-arrow"></i>'}
-            </a>`;
+            </div>`;
           }).join('') : `<p class="text-muted">${TR.dashboard.noReminders}</p>`}
         </div>
       </div>
@@ -106,6 +106,16 @@ export function renderDashboard(container) {
 
   if (window.lucide) window.lucide.createIcons();
   renderCharts(properties, clients);
+
+  container.querySelectorAll('[data-reminder-id]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.reminderId;
+      const reminder = getAll('reminders').find(r => r.id === id);
+      if (!reminder) return;
+      const { openReminderForm } = await import('./reminders.js');
+      openReminderForm(reminder);
+    });
+  });
 }
 
 function activityIcon(type) {

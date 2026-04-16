@@ -77,7 +77,7 @@ function renderList() {
             ${client ? `<span><i data-lucide="user"></i> ${client.firstName} ${client.lastName}</span>` : ''}
             ${property ? `<span><i data-lucide="building-2"></i> ${property.title}</span>` : ''}
           </div>` : ''}
-          ${r.notes ? `<div class="reminder-notes">${r.notes}</div>` : ''}
+          <div class="reminder-notes">${r.notes || '<span class="notes-empty">Not girilmemiş</span>'}</div>
           <div class="reminder-actions">
             ${r.status !== 'completed' ? `<button class="btn btn-sm btn-success btn-complete" data-id="${r.id}"><i data-lucide="check"></i> ${TR.reminder.markComplete}</button>` : ''}
             <button class="btn btn-sm btn-ghost btn-edit-rem" data-id="${r.id}"><i data-lucide="pencil"></i></button>
