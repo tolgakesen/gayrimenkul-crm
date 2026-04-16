@@ -6,6 +6,9 @@ import { createModal, openModal, closeModal } from '../components/modals.js';
 let filterStatus = '';
 
 export function renderReminders(container) {
+  const pendingFilter = sessionStorage.getItem('dashboard_filter_status');
+  if (pendingFilter !== null) { filterStatus = pendingFilter; sessionStorage.removeItem('dashboard_filter_status'); }
+
   const reminders = getAll('reminders');
   const now = new Date();
 

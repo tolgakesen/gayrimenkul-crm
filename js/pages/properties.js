@@ -11,6 +11,9 @@ let currentProperty = null;
 let currentStep = 0;
 
 export function renderProperties(container) {
+  const pendingFilter = sessionStorage.getItem('dashboard_filter_status');
+  if (pendingFilter !== null) { filterStatus = pendingFilter; sessionStorage.removeItem('dashboard_filter_status'); }
+
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.property.title}</h1>

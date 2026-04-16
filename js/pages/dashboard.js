@@ -25,34 +25,38 @@ export function renderDashboard(container) {
     </div>
 
     <div class="stat-grid">
-      <div class="stat-card">
+      <a href="#/properties" class="stat-card stat-card-link">
         <div class="stat-icon" style="background:var(--color-primary-soft)"><i data-lucide="building-2" style="color:var(--color-primary)"></i></div>
         <div class="stat-info">
           <div class="stat-value">${properties.length}</div>
           <div class="stat-label">${TR.dashboard.totalProperties}</div>
         </div>
-      </div>
-      <div class="stat-card">
+        <i data-lucide="chevron-right" class="stat-arrow"></i>
+      </a>
+      <a href="#/properties" class="stat-card stat-card-link" data-filter-status="active">
         <div class="stat-icon" style="background:var(--color-success-soft)"><i data-lucide="check-circle" style="color:var(--color-success)"></i></div>
         <div class="stat-info">
           <div class="stat-value">${active}</div>
           <div class="stat-label">${TR.dashboard.activeProperties}</div>
         </div>
-      </div>
-      <div class="stat-card">
+        <i data-lucide="chevron-right" class="stat-arrow"></i>
+      </a>
+      <a href="#/clients" class="stat-card stat-card-link">
         <div class="stat-icon" style="background:var(--color-info-soft)"><i data-lucide="users" style="color:var(--color-info)"></i></div>
         <div class="stat-info">
           <div class="stat-value">${clients.length}</div>
           <div class="stat-label">${TR.dashboard.totalClients}</div>
         </div>
-      </div>
-      <div class="stat-card">
+        <i data-lucide="chevron-right" class="stat-arrow"></i>
+      </a>
+      <a href="#/reminders" class="stat-card stat-card-link" data-filter-status="pending">
         <div class="stat-icon" style="background:var(--color-warning-soft)"><i data-lucide="bell" style="color:var(--color-warning)"></i></div>
         <div class="stat-info">
           <div class="stat-value">${pending}</div>
           <div class="stat-label">${TR.dashboard.pendingReminders}</div>
         </div>
-      </div>
+        <i data-lucide="chevron-right" class="stat-arrow"></i>
+      </a>
     </div>
 
     <div class="dashboard-grid">
@@ -106,6 +110,13 @@ export function renderDashboard(container) {
 
   if (window.lucide) window.lucide.createIcons();
   renderCharts(properties, clients);
+
+  // Stat card filtre aktarımı
+  container.querySelectorAll('.stat-card-link[data-filter-status]').forEach(el => {
+    el.addEventListener('click', e => {
+      sessionStorage.setItem('dashboard_filter_status', el.dataset.filterStatus);
+    });
+  });
 
   container.querySelectorAll('[data-reminder-id]').forEach(el => {
     el.addEventListener('click', async () => {
