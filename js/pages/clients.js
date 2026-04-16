@@ -1,0 +1,488 @@
+import { TR } from '../i18n.js';
+import { getAll, saveAll, logActivity } from '../storage.js';
+import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce } from '../utils.js';
+import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
+
+let searchQ = '';
+let filterType = '';
+let filterPriority = '';
+let currentStep = 0;
+
+export function renderClients(container) {
+  container.innerHTML = `
+    <div class="page-header">
+      <h1 class="page-title">${TR.client.title}</h1>
+      <button class="btn btn-primary" id="btn-add-client"><i data-lucide="user-plus"></i> ${TR.client.add}</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" class="search-input" id="client-search" placeholder="${TR.client.searchPlaceholder}" value="${searchQ}">
+      <select class="select-input" id="client-filter-type">
+        <option value="">${TR.common.all}</option>
+        <option value="buyer">${TR.client.buyer}</option>
+        <option value="seller">${TR.client.seller}</option>
+        <option value="tenant">${TR.client.tenant}</option>
+      </select>
+      <select class="select-input" id="client-filter-priority">
+        <option value="">${TR.common.all}</option>
+        <option value="urgent">${TR.client.urgent}</option>
+        <option value="high">${TR.client.high}</option>
+        <option value="medium">${TR.client.medium}</option>
+        <option value="low">${TR.client.low}</option>
+      </select>
+    </div>
+    <div id="clients-list"></div>
+  `;
+
+  if (window.lucide) window.lucide.createIcons();
+  document.getElementById('client-filter-type').value = filterType;
+  document.getElementById('client-filter-priority').value = filterPriority;
+
+  document.getElementById('btn-add-client').addEventListener('click', () => openClientForm(null));
+  document.getElementById('client-search').addEventListener('input', debounce(e => { searchQ = e.target.value; renderList(); }, 250));
+  document.getElementById('client-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
+  document.getElementById('client-filter-priority').addEventListener('change', e => { filterPriority = e.target.value; renderList(); });
+
+  renderList();
+}
+
+function renderList() {
+  let data = getAll('clients');
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    data = data.filter(c => (c.firstName+' '+c.lastName).toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.email||'').toLowerCase().includes(q));
+  }
+  if (filterType) data = data.filter(c => c.clientType === filterType);
+  if (filterPriority) data = data.filter(c => c.priorityLevel === filterPriority);
+
+  const list = document.getElementById('clients-list');
+  if (!list) return;
+
+  if (!data.length) {
+    list.innerHTML = `<div class="empty-state"><i data-lucide="users"></i><p>${TR.client.noData}</p></div>`;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  list.innerHTML = `<div class="table-wrapper"><table class="table"><thead><tr>
+    <th>Ad Soyad</th><th>Telefon</th><th>Tip</th><th>Bütçe</th><th>Öncelik</th><th>Karar</th><th>${TR.common.actions}</th>
+  </tr></thead><tbody>
+    ${data.map(c => `<tr>
+      <td><strong>${c.firstName} ${c.lastName}</strong></td>
+      <td>${c.phone||'—'}</td>
+      <td><span class="badge badge-outline">${typeLabel(c.clientType)}</span></td>
+      <td>${c.budgetMin||c.budgetMax ? (c.budgetMin?formatPrice(c.budgetMin):'')+'–'+(c.budgetMax?formatPrice(c.budgetMax):'') : '—'}</td>
+      <td>${priorityBadge(c.priorityLevel)}</td>
+      <td>${stageLabel(c.decisionStage)}</td>
+      <td class="actions-cell">
+        <button class="btn btn-sm btn-ghost btn-view" data-id="${c.id}"><i data-lucide="eye"></i></button>
+        <button class="btn btn-sm btn-ghost btn-edit" data-id="${c.id}"><i data-lucide="pencil"></i></button>
+        <button class="btn btn-sm btn-ghost btn-delete" data-id="${c.id}"><i data-lucide="trash-2"></i></button>
+      </td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+
+  if (window.lucide) window.lucide.createIcons();
+  document.querySelectorAll('.btn-view').forEach(btn => btn.addEventListener('click', () => openClientDetail(btn.dataset.id)));
+  document.querySelectorAll('.btn-edit').forEach(btn => btn.addEventListener('click', () => {
+    const c = getAll('clients').find(x => x.id === btn.dataset.id);
+    if (c) openClientForm(c);
+  }));
+  document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => deleteClient(btn.dataset.id)));
+}
+
+const typeLabel = t => ({ buyer: TR.client.buyer, seller: TR.client.seller, tenant: TR.client.tenant }[t] || t);
+const stageLabel = s => ({ researching: 'Araştırıyor', deciding: 'Karar Aşamasında', urgent: 'Acil' }[s] || '—');
+function priorityBadge(p) {
+  const map = { low: 'secondary', medium: 'info', high: 'warning', urgent: 'danger' };
+  const labels = { low: TR.client.low, medium: TR.client.medium, high: TR.client.high, urgent: TR.client.urgent };
+  return `<span class="badge badge-${map[p]||'secondary'}">${labels[p]||p}</span>`;
+}
+
+function deleteClient(id) {
+  if (!confirm(TR.client.deleteConfirm)) return;
+  saveAll('clients', getAll('clients').filter(c => c.id !== id));
+  logActivity('client_delete', 'Müşteri silindi', id);
+  showToast('Müşteri silindi');
+  renderList();
+}
+
+function openClientForm(client) {
+  currentStep = 0;
+  const isEdit = !!client;
+  const steps = [TR.client.step1, TR.client.step2, TR.client.step3];
+
+  const defaultWeights = client?.matchWeights || { budget: 40, location: 30, squareMeters: 15, roomCount: 10, features: 5 };
+
+  const body = `
+    ${buildStepIndicator(steps)}
+    <form id="client-form" autocomplete="off">
+      <div class="step-panel active">
+        <div class="form-row">
+          <div class="form-group"><label>${TR.client.firstName} <span class="required">*</span></label><input type="text" name="firstName" value="${client?.firstName||''}" class="input-field" required></div>
+          <div class="form-group"><label>${TR.client.lastName}</label><input type="text" name="lastName" value="${client?.lastName||''}" class="input-field"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>${TR.client.phone}</label><input type="tel" name="phone" value="${client?.phone||''}" class="input-field"></div>
+          <div class="form-group"><label>${TR.client.email}</label><input type="email" name="email" value="${client?.email||''}" class="input-field"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>${TR.client.clientType}</label>
+            <select name="clientType" class="select-input">
+              <option value="buyer" ${(!client||client.clientType==='buyer')?'selected':''}>${TR.client.buyer}</option>
+              <option value="seller" ${client?.clientType==='seller'?'selected':''}>${TR.client.seller}</option>
+              <option value="tenant" ${client?.clientType==='tenant'?'selected':''}>${TR.client.tenant}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>${TR.client.priorityLevel}</label>
+            <select name="priorityLevel" class="select-input">
+              <option value="low" ${(!client||client.priorityLevel==='low')?'selected':''}>${TR.client.low}</option>
+              <option value="medium" ${client?.priorityLevel==='medium'?'selected':''}>${TR.client.medium}</option>
+              <option value="high" ${client?.priorityLevel==='high'?'selected':''}>${TR.client.high}</option>
+              <option value="urgent" ${client?.priorityLevel==='urgent'?'selected':''}>${TR.client.urgent}</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>${TR.client.firstMeetingDate}</label><input type="date" name="firstMeetingDate" value="${client?.firstMeetingDate||''}" class="input-field"></div>
+        <div class="form-group"><label>${TR.client.notes}</label><textarea name="notes" rows="2" class="textarea-input">${client?.notes||''}</textarea></div>
+      </div>
+
+      <div class="step-panel">
+        <div class="form-row">
+          <div class="form-group"><label>${TR.client.budgetMin}</label><input type="number" name="budgetMin" value="${client?.budgetMin||''}" class="input-field"></div>
+          <div class="form-group"><label>${TR.client.budgetMax}</label><input type="number" name="budgetMax" value="${client?.budgetMax||''}" class="input-field"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>${TR.client.desiredMinM2}</label><input type="number" name="desiredMinM2" value="${client?.desiredMinM2||''}" class="input-field"></div>
+          <div class="form-group"><label>${TR.client.desiredMaxM2}</label><input type="number" name="desiredMaxM2" value="${client?.desiredMaxM2||''}" class="input-field"></div>
+        </div>
+        <div class="form-group">
+          <label>${TR.client.desiredRoomCounts}</label>
+          <div class="checkbox-group">
+            ${ROOM_OPTIONS.map(r => `<label class="checkbox-label"><input type="checkbox" name="desiredRoomCounts" value="${r}" ${(client?.desiredRoomCounts||[]).includes(r)?'checked':''}> ${r}</label>`).join('')}
+          </div>
+        </div>
+        <div class="form-group"><label>${TR.client.preferredDistricts} (virgülle ayırın)</label><input type="text" name="preferredDistricts" value="${(client?.preferredDistricts||[]).join(', ')}" class="input-field" placeholder="Kadıköy, Üsküdar"></div>
+        <div class="form-group"><label>${TR.client.preferredNeighborhoods} (virgülle ayırın)</label><input type="text" name="preferredNeighborhoods" value="${(client?.preferredNeighborhoods||[]).join(', ')}" class="input-field"></div>
+        <div class="form-group">
+          <label>${TR.client.desiredFeatures}</label>
+          <div class="checkbox-group">
+            ${FEATURE_OPTIONS.map(f => `<label class="checkbox-label"><input type="checkbox" name="desiredFeatures" value="${f.value}" ${(client?.desiredFeatures||[]).includes(f.value)?'checked':''}> ${f.label}</label>`).join('')}
+          </div>
+        </div>
+        <div class="form-group">
+          <label>${TR.client.listingTypePreference}</label>
+          <select name="listingTypePreference" class="select-input">
+            <option value="sale" ${(!client||client.listingTypePreference==='sale')?'selected':''}>${TR.property.sale}</option>
+            <option value="rent" ${client?.listingTypePreference==='rent'?'selected':''}>${TR.property.rent}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="step-panel">
+        <div class="form-row">
+          <div class="form-group"><label>${TR.client.declaredIncome} (₺/ay)</label><input type="number" name="declaredIncome" value="${client?.declaredIncome||''}" class="input-field"></div>
+          <div class="form-group">
+            <label>${TR.client.creditStatus}</label>
+            <select name="creditStatus" class="select-input">
+              <option value="unknown" ${(!client||client.creditStatus==='unknown')?'selected':''}>Bilinmiyor</option>
+              <option value="approved" ${client?.creditStatus==='approved'?'selected':''}>Onaylandı</option>
+              <option value="pending" ${client?.creditStatus==='pending'?'selected':''}>Beklemede</option>
+              <option value="rejected" ${client?.creditStatus==='rejected'?'selected':''}>Reddedildi</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>${TR.client.decisionStage}</label>
+          <select name="decisionStage" class="select-input">
+            <option value="researching" ${(!client||client.decisionStage==='researching')?'selected':''}>Araştırıyor</option>
+            <option value="deciding" ${client?.decisionStage==='deciding'?'selected':''}>Karar Aşamasında</option>
+            <option value="urgent" ${client?.decisionStage==='urgent'?'selected':''}>Acil</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>${TR.client.matchWeights} <span class="form-hint">(Toplam 100 olmalı)</span></label>
+          <div class="weights-editor" id="weights-editor">
+            ${weightsHTML(defaultWeights)}
+          </div>
+        </div>
+      </div>
+    </form>
+  `;
+
+  const footer = `
+    <button type="button" class="btn btn-ghost btn-prev" style="display:none"><i data-lucide="arrow-left"></i> ${TR.common.prev}</button>
+    <button type="button" class="btn btn-primary btn-next">${TR.common.next} <i data-lucide="arrow-right"></i></button>
+    <button type="button" class="btn btn-primary btn-save" style="display:none"><i data-lucide="save"></i> ${TR.common.save}</button>
+  `;
+
+  const modal = createModal('client-modal', isEdit ? TR.client.edit : TR.client.add, body, footer);
+  openModal('client-modal');
+
+  modal.querySelector('.btn-next')?.addEventListener('click', () => {
+    if (currentStep < 2) { currentStep++; showStep(modal, currentStep, 3); if (window.lucide) window.lucide.createIcons(); }
+  });
+  modal.querySelector('.btn-prev')?.addEventListener('click', () => {
+    if (currentStep > 0) { currentStep--; showStep(modal, currentStep, 3); if (window.lucide) window.lucide.createIcons(); }
+  });
+  modal.querySelector('.btn-save')?.addEventListener('click', () => saveClient(modal, client?.id));
+
+  // Weight sliders live update
+  modal.querySelectorAll('.weight-slider').forEach(slider => {
+    slider.addEventListener('input', () => updateWeightTotal(modal));
+  });
+}
+
+function weightsHTML(w) {
+  const fields = [
+    { key: 'budget', label: 'Bütçe' },
+    { key: 'location', label: 'Konum' },
+    { key: 'squareMeters', label: 'm²' },
+    { key: 'roomCount', label: 'Oda' },
+    { key: 'features', label: 'Özellikler' },
+  ];
+  return fields.map(f => `
+    <div class="weight-row">
+      <span class="weight-label">${f.label}</span>
+      <input type="range" class="weight-slider" name="w_${f.key}" min="0" max="100" value="${w[f.key]||0}">
+      <span class="weight-val" id="wv_${f.key}">${w[f.key]||0}</span>
+    </div>
+  `).join('') + `<div class="weight-total">Toplam: <strong id="weight-total-sum">${Object.values(w).reduce((a,b)=>a+b,0)}</strong>/100</div>`;
+}
+
+function updateWeightTotal(modal) {
+  let sum = 0;
+  modal.querySelectorAll('.weight-slider').forEach(s => {
+    const key = s.name.replace('w_', '');
+    const val = parseInt(s.value);
+    sum += val;
+    const vEl = modal.querySelector(`#wv_${key}`);
+    if (vEl) vEl.textContent = val;
+  });
+  const total = modal.querySelector('#weight-total-sum');
+  if (total) { total.textContent = sum; total.style.color = sum === 100 ? 'var(--color-success)' : 'var(--color-danger)'; }
+}
+
+function saveClient(modal, editId) {
+  const form = modal.querySelector('#client-form');
+  const fd = new FormData(form);
+  const get = k => fd.get(k);
+
+  const firstName = get('firstName')?.trim();
+  if (!firstName) { showToast('Ad zorunlu', 'error'); return; }
+
+  const desiredRoomCounts = [...form.querySelectorAll('input[name="desiredRoomCounts"]:checked')].map(i => i.value);
+  const desiredFeatures = [...form.querySelectorAll('input[name="desiredFeatures"]:checked')].map(i => i.value);
+  const preferredDistricts = get('preferredDistricts')?.split(',').map(s => s.trim()).filter(Boolean) || [];
+  const preferredNeighborhoods = get('preferredNeighborhoods')?.split(',').map(s => s.trim()).filter(Boolean) || [];
+
+  const weights = {};
+  form.querySelectorAll('.weight-slider').forEach(s => { weights[s.name.replace('w_', '')] = parseInt(s.value); });
+
+  const data = {
+    id: editId || uuid(),
+    createdAt: editId ? (getAll('clients').find(c=>c.id===editId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    firstName, lastName: get('lastName')?.trim()||'',
+    phone: get('phone')?.trim(),
+    email: get('email')?.trim(),
+    notes: get('notes'),
+    budgetMin: parseFloat(get('budgetMin')) || null,
+    budgetMax: parseFloat(get('budgetMax')) || null,
+    preferredDistricts, preferredNeighborhoods,
+    desiredFeatures, desiredRoomCounts,
+    desiredMinM2: parseFloat(get('desiredMinM2')) || null,
+    desiredMaxM2: parseFloat(get('desiredMaxM2')) || null,
+    clientType: get('clientType'),
+    priorityLevel: get('priorityLevel'),
+    firstMeetingDate: get('firstMeetingDate') || null,
+    declaredIncome: parseFloat(get('declaredIncome')) || null,
+    creditStatus: get('creditStatus'),
+    decisionStage: get('decisionStage'),
+    listingTypePreference: get('listingTypePreference'),
+    matchWeights: weights,
+    meetingHistory: editId ? (getAll('clients').find(c=>c.id===editId)?.meetingHistory||[]) : [],
+    shownPropertyIds: editId ? (getAll('clients').find(c=>c.id===editId)?.shownPropertyIds||[]) : [],
+  };
+
+  let clients = getAll('clients');
+  if (editId) {
+    clients = clients.map(c => c.id === editId ? data : c);
+    logActivity('client_edit', `Müşteri güncellendi: ${firstName}`, editId);
+  } else {
+    clients.unshift(data);
+    logActivity('client_add', `Yeni müşteri: ${firstName} ${data.lastName}`, data.id);
+  }
+  saveAll('clients', clients);
+  closeModal('client-modal');
+  showToast(editId ? 'Müşteri güncellendi' : 'Müşteri eklendi');
+  renderList();
+}
+
+export function openClientDetail(id) {
+  const client = getAll('clients').find(x => x.id === id);
+  if (!client) return;
+  const properties = getAll('properties');
+
+  import('../matching.js').then(({ computeMatch, scoreColor }) => {
+    const matches = properties
+      .filter(p => p.status === 'active' && p.listingType === (client.listingTypePreference || 'sale'))
+      .map(p => ({ property: p, result: computeMatch(p, client) }))
+      .filter(m => m.result.overallScore >= 40)
+      .sort((a, b) => b.result.overallScore - a.result.overallScore)
+      .slice(0, 8);
+
+    const shownProperties = (client.shownPropertyIds||[]).map(pid => properties.find(p=>p.id===pid)).filter(Boolean);
+
+    const body = `
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="profile">Profil</button>
+        <button class="tab-btn" data-tab="criteria">Arama Kriterleri</button>
+        <button class="tab-btn" data-tab="matches">Eşleşen İlanlar ${matches.length ? `<span class="badge badge-primary">${matches.length}</span>` : ''}</button>
+        <button class="tab-btn" data-tab="shown">Gösterilen İlanlar</button>
+        <button class="tab-btn" data-tab="meetings">Görüşmeler</button>
+      </div>
+      <div class="tab-content">
+        <div class="tab-panel active" id="tab-profile">
+          <div class="detail-grid">
+            ${dRow('Ad Soyad', client.firstName+' '+client.lastName)}
+            ${dRow('Telefon', client.phone||'—')}
+            ${dRow('E-posta', client.email||'—')}
+            ${dRow('Müşteri Tipi', typeLabel(client.clientType))}
+            ${dRow('Öncelik', client.priorityLevel)}
+            ${dRow('Karar Aşaması', stageLabel(client.decisionStage))}
+            ${dRow('İlk Görüşme', formatDate(client.firstMeetingDate))}
+            ${dRow('Kredi Durumu', client.creditStatus||'—')}
+            ${dRow('Beyan Gelir', client.declaredIncome ? formatPrice(client.declaredIncome)+'/ay' : '—')}
+          </div>
+          ${client.notes ? `<div class="notes-box"><strong>Not:</strong> ${client.notes}</div>` : ''}
+        </div>
+        <div class="tab-panel" id="tab-criteria">
+          <div class="detail-grid">
+            ${dRow('Bütçe', [client.budgetMin?formatPrice(client.budgetMin):'', client.budgetMax?formatPrice(client.budgetMax):''].filter(Boolean).join(' – ') || '—')}
+            ${dRow('m²', [client.desiredMinM2, client.desiredMaxM2].filter(Boolean).join(' – ') || '—')}
+            ${dRow('Oda Sayısı', (client.desiredRoomCounts||[]).join(', ')||'—')}
+            ${dRow('Tercih Edilen İlçe', (client.preferredDistricts||[]).join(', ')||'—')}
+            ${dRow('Tercih Edilen Mahalle', (client.preferredNeighborhoods||[]).join(', ')||'—')}
+            ${dRow('İstenen Özellikler', (client.desiredFeatures||[]).map(f => FEATURE_OPTIONS.find(o=>o.value===f)?.label||f).join(', ')||'—')}
+            ${dRow('Tip Tercihi', client.listingTypePreference==='sale'?TR.property.sale:TR.property.rent)}
+          </div>
+          <h4 style="margin:1rem 0 .5rem">Eşleştirme Ağırlıkları</h4>
+          <div class="weights-display">
+            ${Object.entries(client.matchWeights||{}).map(([k,v]) => `
+              <div class="weight-display-row">
+                <span>${TR.matching[k]||k}</span>
+                <div class="mini-bar"><div style="width:${v}%;background:var(--color-primary)"></div></div>
+                <span>${v}%</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="tab-panel" id="tab-matches">
+          ${matches.length ? matches.map(m => `
+            <div class="match-item">
+              <div class="match-score" style="color:${scoreColor(m.result.overallScore)}">
+                <span class="score-num">${m.result.overallScore}</span><span class="score-pct">%</span>
+              </div>
+              <div class="match-info">
+                <div class="match-name">${truncate(m.property.title, 35)}</div>
+                <div class="match-phone">${m.property.district||''} · ${m.property.roomCount||''} · ${formatPrice(m.property.price)}</div>
+                <div class="score-bars">
+                  ${Object.entries(m.result.breakdown).map(([k,v]) => `
+                    <div class="score-bar-row">
+                      <span class="score-bar-label">${TR.matching[k]||k}</span>
+                      <div class="score-bar-track"><div class="score-bar-fill" style="width:${v.score}%;background:${scoreColor(v.score)}"></div></div>
+                      <span class="score-bar-val">${v.score}%</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              <button class="btn btn-sm btn-outline mark-shown" data-pid="${m.property.id}" data-cid="${client.id}">Gösterildi</button>
+            </div>
+          `).join('') : '<p class="text-muted">Eşleşen aktif ilan bulunamadı</p>'}
+        </div>
+        <div class="tab-panel" id="tab-shown">
+          ${shownProperties.length ? shownProperties.map(p => `
+            <div class="shown-item">
+              <div><strong>${truncate(p.title,35)}</strong></div>
+              <div class="text-muted">${p.district||''} · ${formatPrice(p.price)}</div>
+            </div>
+          `).join('') : '<p class="text-muted">Henüz ilan gösterilmedi</p>'}
+        </div>
+        <div class="tab-panel" id="tab-meetings">
+          <button class="btn btn-sm btn-primary" id="btn-add-meeting-client">+ Görüşme Ekle</button>
+          <div id="meeting-list-client" class="meeting-list">
+            ${(client.meetingHistory||[]).length ? (client.meetingHistory||[]).map(m => meetingRow(m)).join('') : '<p class="text-muted">Görüşme kaydı yok</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    const modal = createModal('client-detail-modal', client.firstName+' '+client.lastName, body);
+    openModal('client-detail-modal');
+
+    modal.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        modal.querySelectorAll('.tab-panel').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        modal.querySelector('#tab-'+btn.dataset.tab)?.classList.add('active');
+      });
+    });
+
+    modal.querySelectorAll('.mark-shown').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const clients = getAll('clients');
+        const idx = clients.findIndex(c => c.id === btn.dataset.cid);
+        if (idx >= 0) {
+          const shown = clients[idx].shownPropertyIds || [];
+          if (!shown.includes(btn.dataset.pid)) {
+            clients[idx].shownPropertyIds = [...shown, btn.dataset.pid];
+            saveAll('clients', clients);
+          }
+        }
+        btn.textContent = '✓ Gösterildi'; btn.disabled = true;
+      });
+    });
+
+    modal.querySelector('#btn-add-meeting-client')?.addEventListener('click', () => addMeeting(id, 'meeting-list-client'));
+  });
+}
+
+function dRow(label, value) {
+  return `<div class="detail-row"><span class="detail-label">${label}</span><span class="detail-value">${value}</span></div>`;
+}
+
+function meetingRow(m) {
+  const typeMap = { phone: 'Telefon', in_person: 'Yüz Yüze', online: 'Online', viewing: 'Gezi' };
+  return `<div class="meeting-item"><div class="meeting-type">${typeMap[m.type]||m.type}</div><div class="meeting-date">${formatDate(m.date)}</div><div class="meeting-notes">${m.notes||''}</div></div>`;
+}
+
+function addMeeting(clientId, listContainerId) {
+  const html = `
+    <div class="form-group"><label>Tür</label>
+      <select id="m-type" class="select-input">
+        <option value="phone">Telefon</option><option value="in_person">Yüz Yüze</option>
+        <option value="online">Online</option><option value="viewing">Gezi</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Tarih</label><input type="date" id="m-date" class="input-field" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div class="form-group"><label>Not</label><textarea id="m-notes" rows="2" class="textarea-input"></textarea></div>
+  `;
+  const m = createModal('meeting-modal-c', 'Görüşme Ekle', html, `<button class="btn btn-primary" id="save-meeting-c">Kaydet</button>`);
+  openModal('meeting-modal-c');
+
+  m.querySelector('#save-meeting-c').addEventListener('click', () => {
+    const entry = { id: uuid(), type: m.querySelector('#m-type').value, date: m.querySelector('#m-date').value, notes: m.querySelector('#m-notes').value };
+    const clients = getAll('clients');
+    const idx = clients.findIndex(x => x.id === clientId);
+    if (idx >= 0) {
+      clients[idx].meetingHistory = [...(clients[idx].meetingHistory||[]), entry];
+      saveAll('clients', clients);
+    }
+    closeModal('meeting-modal-c');
+    const list = document.getElementById(listContainerId);
+    if (list) { const ex = list.querySelector('.text-muted'); if (ex) ex.remove(); list.insertAdjacentHTML('beforeend', meetingRow(entry)); }
+  });
+}
