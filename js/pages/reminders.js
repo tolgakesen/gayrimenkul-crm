@@ -122,7 +122,7 @@ function deleteReminder(id) {
   renderList();
 }
 
-function openReminderForm(reminder) {
+export function openReminderForm(reminder) {
   const clients = getAll('clients');
   const properties = getAll('properties');
   const isEdit = !!reminder;

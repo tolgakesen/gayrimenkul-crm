@@ -28,9 +28,12 @@ async function loadPage(hash) {
       renderMatching(main);
     } else if (hash.startsWith('#/reminders')) {
       const id = hash.split('/')[2];
-      const { renderReminders, openReminderDetail } = await import('./pages/reminders.js');
+      const { renderReminders, openReminderForm } = await import('./pages/reminders.js');
       renderReminders(main);
-      if (id) openReminderDetail(id);
+      if (id) {
+        const reminder = getAll('reminders').find(r => r.id === id);
+        if (reminder) openReminderForm(reminder);
+      }
     } else if (hash.startsWith('#/settings')) {
       const { renderSettings } = await import('./pages/settings.js');
       renderSettings(main);
