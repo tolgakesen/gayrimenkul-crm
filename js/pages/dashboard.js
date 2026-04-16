@@ -76,7 +76,7 @@ export function renderDashboard(container) {
             const c = r.clientId ? clients.find(x => x.id === r.clientId) : null;
             const overdue = new Date(r.dueDate) < new Date();
             return `<div class="activity-item activity-item-link" data-reminder-id="${r.id}">
-              <div class="activity-icon ${overdue ? 'overdue' : ''}"><i data-lucide="bell"></i></div>
+              <div class="activity-icon overdue"><i data-lucide="bell"></i></div>
               <div class="activity-content">
                 <div class="activity-title">${r.title}</div>
                 <div class="activity-meta">${formatDate(r.dueDate)} ${c ? '· ' + c.firstName + ' ' + c.lastName : ''}</div>

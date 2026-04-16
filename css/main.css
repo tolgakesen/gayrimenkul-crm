@@ -618,6 +618,11 @@ img { max-width: 100%; }
 .reminder-links i { width: 12px; height: 12px; }
 .reminder-notes { font-size: .8rem; color: var(--color-text-muted); margin-bottom: .5rem; min-height: 1.2em; }
 .notes-empty { font-style: italic; opacity: .5; }
+.reminder-meta-block { display: flex; flex-direction: column; gap: .35rem; margin: .5rem 0; }
+.reminder-meta-row { display: flex; align-items: baseline; gap: .4rem; font-size: .8rem; color: var(--color-text-muted); }
+.reminder-meta-row i { width: 13px; height: 13px; flex-shrink: 0; position: relative; top: 1px; }
+.reminder-meta-row .meta-label { font-weight: 600; color: var(--color-text); white-space: nowrap; }
+.reminder-meta-row span:last-child { color: var(--color-text); }
 .reminder-actions { display: flex; gap: .35rem; flex-wrap: wrap; }
 
 /* ===== MEETINGS ===== */

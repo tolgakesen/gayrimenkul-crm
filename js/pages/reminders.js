@@ -73,11 +73,11 @@ function renderList() {
             </div>
             ${statusBadge(r.status)}
           </div>
-          ${client || property ? `<div class="reminder-links text-muted">
-            ${client ? `<span><i data-lucide="user"></i> ${client.firstName} ${client.lastName}</span>` : ''}
-            ${property ? `<span><i data-lucide="building-2"></i> ${property.title}</span>` : ''}
-          </div>` : ''}
-          <div class="reminder-notes">${r.notes || '<span class="notes-empty">Not girilmemiş</span>'}</div>
+          <div class="reminder-meta-block">
+            ${client ? `<div class="reminder-meta-row"><i data-lucide="user"></i><span class="meta-label">Müşteri:</span><span>${client.firstName} ${client.lastName}</span></div>` : ''}
+            ${property ? `<div class="reminder-meta-row"><i data-lucide="building-2"></i><span class="meta-label">İlan:</span><span>${property.title}</span></div>` : ''}
+            <div class="reminder-meta-row"><i data-lucide="file-text"></i><span class="meta-label">Notlar:</span><span>${r.notes || '<em class="notes-empty">—</em>'}</span></div>
+          </div>
           <div class="reminder-actions">
             ${r.status !== 'completed' ? `<button class="btn btn-sm btn-success btn-complete" data-id="${r.id}"><i data-lucide="check"></i> ${TR.reminder.markComplete}</button>` : ''}
             <button class="btn btn-sm btn-ghost btn-edit-rem" data-id="${r.id}"><i data-lucide="pencil"></i></button>
