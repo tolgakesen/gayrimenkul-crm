@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/claude/gun2 add .)",
+      "Bash(git -C /c/claude/gun2 commit -m \"Remove unnecessary GitHub Actions workflow \\(Pages serves directly from branch\\)\")",
+      "Bash(git -C /c/claude/gun2 push)"
+    ]
+  }
+}
