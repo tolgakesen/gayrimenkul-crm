@@ -621,8 +621,8 @@ img { max-width: 100%; }
 .score-label { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 .match-card-body { flex: 1; }
 .match-entity-name { font-weight: 700; font-size: 1rem; margin-bottom: .2rem; }
-.match-entity-link { color: inherit; text-decoration: none; }
-.match-entity-link:hover { color: var(--color-primary); text-decoration: underline; cursor: pointer; }
+.match-card-clickable { cursor: pointer; transition: transform .15s, box-shadow .15s; }
+.match-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.15); border-color: var(--color-primary); }
 .match-entity-sub { font-size: .8rem; margin-bottom: .75rem; }
 .score-breakdown { display: flex; flex-direction: column; gap: .35rem; }
 .breakdown-row { display: flex; align-items: center; gap: .5rem; }

@@ -131,7 +131,7 @@ function matchCard({ entity, result }) {
   const labelMap = { excellent: TR.matching.excellent, good: TR.matching.good, fair: TR.matching.fair, poor: TR.matching.poor };
 
   return `
-    <div class="match-card card">
+    <div class="match-card card${!isClient ? ' match-card-clickable' : ''}" ${!isClient ? `data-open-property="${entity.id}"` : ''}>
       <div class="match-card-score">
         <svg viewBox="0 0 36 36" class="score-circle">
           <circle class="circle-track" cx="18" cy="18" r="15" />
@@ -146,7 +146,7 @@ function matchCard({ entity, result }) {
         <div class="score-label" style="color:${scoreColor(result.overallScore)}">${labelMap[label]||label}</div>
       </div>
       <div class="match-card-body">
-        <h4 class="match-entity-name">${!isClient ? `<span class="match-entity-link" data-open-property="${entity.id}">${name}</span>` : name}</h4>
+        <h4 class="match-entity-name">${name}</h4>
         <div class="match-entity-sub text-muted">${sub}</div>
         <div class="score-breakdown">
           ${Object.entries(result.breakdown).map(([k, v]) => `
