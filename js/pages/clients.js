@@ -2,6 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
 import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
+import { hasPermission } from '../auth.js';
 
 let searchQ = '';
 let filterType = '';
@@ -12,7 +13,7 @@ export function renderClients(container) {
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.client.title}</h1>
-      <button class="btn btn-primary" id="btn-add-client"><i data-lucide="user-plus"></i> ${TR.client.add}</button>
+      ${hasPermission('clients','add') ? `<button class="btn btn-primary" id="btn-add-client"><i data-lucide="user-plus"></i> ${TR.client.add}</button>` : ''}
     </div>
     <div class="toolbar">
       <input type="text" class="search-input" id="client-search" placeholder="${TR.client.searchPlaceholder}" value="${searchQ}">
@@ -37,7 +38,7 @@ export function renderClients(container) {
   document.getElementById('client-filter-type').value = filterType;
   document.getElementById('client-filter-priority').value = filterPriority;
 
-  document.getElementById('btn-add-client').addEventListener('click', () => openClientForm(null));
+  document.getElementById('btn-add-client')?.addEventListener('click', () => openClientForm(null));
   document.getElementById('client-search').addEventListener('input', debounce(e => { searchQ = e.target.value; renderList(); }, 250));
   document.getElementById('client-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
   document.getElementById('client-filter-priority').addEventListener('change', e => { filterPriority = e.target.value; renderList(); });
@@ -75,8 +76,8 @@ function renderList() {
       <td>${stageLabel(c.decisionStage)}</td>
       <td class="actions-cell">
         <button class="btn btn-sm btn-ghost btn-view" data-id="${c.id}"><i data-lucide="eye"></i></button>
-        <button class="btn btn-sm btn-ghost btn-edit" data-id="${c.id}"><i data-lucide="pencil"></i></button>
-        <button class="btn btn-sm btn-ghost btn-delete" data-id="${c.id}"><i data-lucide="trash-2"></i></button>
+        ${hasPermission('clients','edit') ? `<button class="btn btn-sm btn-ghost btn-edit" data-id="${c.id}"><i data-lucide="pencil"></i></button>` : ''}
+        ${hasPermission('clients','delete') ? `<button class="btn btn-sm btn-ghost btn-delete" data-id="${c.id}"><i data-lucide="trash-2"></i></button>` : ''}
       </td>
     </tr>`).join('')}
   </tbody></table></div>`;

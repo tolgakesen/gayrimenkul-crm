@@ -2,12 +2,18 @@ import { TR } from '../i18n.js';
 import { getAll } from '../storage.js';
 import { formatPrice, truncate } from '../utils.js';
 import { computeMatch, scoreColor, scoreLabel } from '../matching.js';
+import { hasPermission } from '../auth.js';
 
 let mode = 'client'; // 'client' | 'property'
 let selectedId = null;
 let minScore = 40;
 
 export function renderMatching(container) {
+  if (!hasPermission('matching', 'view')) {
+    container.innerHTML = `<div class="error-state"><i data-lucide="shield-off"></i><p>Bu sayfaya erişim yetkiniz yok.</p></div>`;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
   const clients = getAll('clients');
   const properties = getAll('properties');
 

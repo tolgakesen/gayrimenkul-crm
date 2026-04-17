@@ -1,8 +1,14 @@
 import { TR } from '../i18n.js';
 import { getAll, saveAll, getSettings, saveSettings, exportBackup, importBackup, getStorageUsagePct } from '../storage.js';
 import { downloadJSON, downloadCSV, showToast, confirm } from '../utils.js';
+import { hasPermission } from '../auth.js';
 
 export function renderSettings(container) {
+  if (!hasPermission('settings', 'view')) {
+    container.innerHTML = `<div class="error-state"><i data-lucide="shield-off"></i><p>Bu sayfaya erişim yetkiniz yok.</p></div>`;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
   const settings = getSettings();
   const usagePct = getStorageUsagePct();
   const w = settings.defaultWeights || { budget: 40, location: 30, squareMeters: 15, roomCount: 10, features: 5 };

@@ -2,6 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity, getSettings } from '../storage.js';
 import { uuid, formatDateTime, formatDate, showToast, confirm, isOverdue } from '../utils.js';
 import { createModal, openModal, closeModal } from '../components/modals.js';
+import { hasPermission } from '../auth.js';
 
 let filterStatus = '';
 
@@ -23,7 +24,7 @@ export function renderReminders(container) {
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.reminder.title}</h1>
-      <button class="btn btn-primary" id="btn-add-reminder"><i data-lucide="plus"></i> ${TR.reminder.add}</button>
+      ${hasPermission('reminders','add') ? `<button class="btn btn-primary" id="btn-add-reminder"><i data-lucide="plus"></i> ${TR.reminder.add}</button>` : ''}
     </div>
     <div class="toolbar">
       <div class="filter-tabs">
@@ -36,7 +37,7 @@ export function renderReminders(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons();
-  document.getElementById('btn-add-reminder').addEventListener('click', () => openReminderForm(null));
+  document.getElementById('btn-add-reminder')?.addEventListener('click', () => openReminderForm(null));
   document.querySelectorAll('.filter-tab').forEach(btn => {
     btn.addEventListener('click', () => { filterStatus = btn.dataset.status; renderReminders(container); });
   });
@@ -82,9 +83,9 @@ function renderList() {
             <div class="reminder-meta-row"><i data-lucide="file-text"></i><span class="meta-label">Notlar:</span><span>${r.notes || '<em class="notes-empty">—</em>'}</span></div>
           </div>
           <div class="reminder-actions">
-            ${r.status !== 'completed' ? `<button class="btn btn-sm btn-success btn-complete" data-id="${r.id}"><i data-lucide="check"></i> ${TR.reminder.markComplete}</button>` : ''}
-            <button class="btn btn-sm btn-ghost btn-edit-rem" data-id="${r.id}"><i data-lucide="pencil"></i></button>
-            <button class="btn btn-sm btn-ghost btn-delete-rem" data-id="${r.id}"><i data-lucide="trash-2"></i></button>
+            ${r.status !== 'completed' && hasPermission('reminders','edit') ? `<button class="btn btn-sm btn-success btn-complete" data-id="${r.id}"><i data-lucide="check"></i> ${TR.reminder.markComplete}</button>` : ''}
+            ${hasPermission('reminders','edit') ? `<button class="btn btn-sm btn-ghost btn-edit-rem" data-id="${r.id}"><i data-lucide="pencil"></i></button>` : ''}
+            ${hasPermission('reminders','delete') ? `<button class="btn btn-sm btn-ghost btn-delete-rem" data-id="${r.id}"><i data-lucide="trash-2"></i></button>` : ''}
           </div>
         </div>
       `;

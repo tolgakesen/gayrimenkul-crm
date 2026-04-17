@@ -1,12 +1,13 @@
 import { renderSidebar, updateSidebarActive } from './components/sidebar.js';
 import { getSettings, saveSettings, getAll } from './storage.js';
 import { checkReminders } from './pages/reminders.js';
+import { isLoggedIn, logout, isAdmin } from './auth.js';
 
 async function loadPage(hash) {
+  if (!isLoggedIn()) { showLogin(); return; }
+
   const main = document.getElementById('main-content');
   if (!main) return;
-
-  // Show loading
   main.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
 
   try {
@@ -37,6 +38,9 @@ async function loadPage(hash) {
     } else if (hash.startsWith('#/settings')) {
       const { renderSettings } = await import('./pages/settings.js');
       renderSettings(main);
+    } else if (hash.startsWith('#/users')) {
+      const { renderUsers } = await import('./pages/users.js');
+      renderUsers(main);
     } else {
       const { renderDashboard } = await import('./pages/dashboard.js');
       renderDashboard(main);
@@ -53,10 +57,7 @@ async function loadPage(hash) {
 function updateNotificationBadge() {
   const pending = getAll('reminders').filter(r => r.status === 'pending' || r.status === 'overdue').length;
   const badge = document.getElementById('notif-badge');
-  if (badge) {
-    badge.textContent = pending;
-    badge.style.display = pending ? '' : 'none';
-  }
+  if (badge) { badge.textContent = pending; badge.style.display = pending ? '' : 'none'; }
 }
 
 function applyTheme(theme) {
@@ -64,8 +65,7 @@ function applyTheme(theme) {
 }
 
 function initTheme() {
-  const settings = getSettings();
-  applyTheme(settings.theme || 'dark');
+  applyTheme(getSettings().theme || 'dark');
 }
 
 function initNotifications() {
@@ -74,8 +74,48 @@ function initNotifications() {
   }
 }
 
-function initSidebar() {
-  renderSidebar();
+function showLogin() {
+  document.getElementById('app-shell').style.display = 'none';
+  const ls = document.getElementById('login-screen');
+  ls.style.display = 'flex';
+
+  import('./pages/login.js').then(({ renderLogin }) => {
+    renderLogin(document.getElementById('login-content'), () => {
+      ls.style.display = 'none';
+      document.getElementById('app-shell').style.display = '';
+      renderSidebar();
+      attachSidebarEvents();
+      const target = location.hash && location.hash !== '#/login' ? location.hash : '#/';
+      if (location.hash === target) {
+        loadPage(target);
+      } else {
+        location.hash = target;
+      }
+    });
+  });
+}
+
+function attachSidebarEvents() {
+  document.getElementById('sidebar').addEventListener('click', e => {
+    const logoutBtn = e.target.closest('#btn-logout');
+    if (logoutBtn) {
+      logout();
+      document.getElementById('app-shell').style.display = 'none';
+      showLogin();
+    }
+
+    const overlay = document.getElementById('sidebar-overlay');
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar.classList.contains('open')) {
+      const isInsideSidebar = sidebar.contains(e.target);
+      if (!isInsideSidebar) { sidebar.classList.remove('open'); overlay?.classList.remove('open'); }
+    }
+  });
+}
+
+function initApp() {
+  initTheme();
+  initNotifications();
 
   document.addEventListener('click', e => {
     const toggle = e.target.closest('#theme-toggle');
@@ -99,24 +139,20 @@ function initSidebar() {
       overlay.classList.remove('open');
     }
   });
-}
 
-function init() {
-  initTheme();
-  initSidebar();
-  initNotifications();
-
-  // Route on hash change
   window.addEventListener('hashchange', () => loadPage(location.hash));
 
-  // Initial load
-  loadPage(location.hash);
-
-  // Check reminders every 60 seconds
-  setInterval(checkReminders, 60000);
-
-  // Badge update every 30 seconds
-  setInterval(updateNotificationBadge, 30000);
+  if (isLoggedIn()) {
+    document.getElementById('app-shell').style.display = '';
+    document.getElementById('login-screen').style.display = 'none';
+    renderSidebar();
+    attachSidebarEvents();
+    loadPage(location.hash);
+    setInterval(checkReminders, 60000);
+    setInterval(updateNotificationBadge, 30000);
+  } else {
+    showLogin();
+  }
 }
 
-init();
+initApp();

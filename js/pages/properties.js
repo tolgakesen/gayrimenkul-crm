@@ -2,6 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
 import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
+import { hasPermission } from '../auth.js';
 
 let viewMode = 'grid';
 let searchQ = '';
@@ -17,7 +18,7 @@ export function renderProperties(container) {
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.property.title}</h1>
-      <button class="btn btn-primary" id="btn-add-property"><i data-lucide="plus"></i> ${TR.property.add}</button>
+      ${hasPermission('properties','add') ? `<button class="btn btn-primary" id="btn-add-property"><i data-lucide="plus"></i> ${TR.property.add}</button>` : ''}
     </div>
     <div class="toolbar">
       <input type="text" class="search-input" id="prop-search" placeholder="${TR.property.searchPlaceholder}" value="${searchQ}">
@@ -46,7 +47,7 @@ export function renderProperties(container) {
   document.getElementById('prop-filter-status').value = filterStatus;
   document.getElementById('prop-filter-type').value = filterType;
 
-  document.getElementById('btn-add-property').addEventListener('click', () => openPropertyForm(null));
+  document.getElementById('btn-add-property')?.addEventListener('click', () => openPropertyForm(null));
   document.getElementById('btn-grid').addEventListener('click', () => { viewMode = 'grid'; renderProperties(container); });
   document.getElementById('btn-table').addEventListener('click', () => { viewMode = 'table'; renderProperties(container); });
 
@@ -115,8 +116,8 @@ function propertyCard(p) {
       </div>
       <div class="property-card-actions">
         <button class="btn btn-sm btn-ghost btn-view" data-id="${p.id}" title="${TR.common.details}"><i data-lucide="eye"></i></button>
-        <button class="btn btn-sm btn-ghost btn-edit" data-id="${p.id}" title="${TR.common.edit}"><i data-lucide="pencil"></i></button>
-        <button class="btn btn-sm btn-ghost btn-delete" data-id="${p.id}" title="${TR.common.delete}"><i data-lucide="trash-2"></i></button>
+        ${hasPermission('properties','edit') ? `<button class="btn btn-sm btn-ghost btn-edit" data-id="${p.id}" title="${TR.common.edit}"><i data-lucide="pencil"></i></button>` : ''}
+        ${hasPermission('properties','delete') ? `<button class="btn btn-sm btn-ghost btn-delete" data-id="${p.id}" title="${TR.common.delete}"><i data-lucide="trash-2"></i></button>` : ''}
       </div>
     </div>
   `;
@@ -140,8 +141,8 @@ function propertyTable(data) {
             <td>${statusBadge(p.status)}</td>
             <td class="actions-cell">
               <button class="btn btn-sm btn-ghost btn-view" data-id="${p.id}"><i data-lucide="eye"></i></button>
-              <button class="btn btn-sm btn-ghost btn-edit" data-id="${p.id}"><i data-lucide="pencil"></i></button>
-              <button class="btn btn-sm btn-ghost btn-delete" data-id="${p.id}"><i data-lucide="trash-2"></i></button>
+              ${hasPermission('properties','edit') ? `<button class="btn btn-sm btn-ghost btn-edit" data-id="${p.id}"><i data-lucide="pencil"></i></button>` : ''}
+              ${hasPermission('properties','delete') ? `<button class="btn btn-sm btn-ghost btn-delete" data-id="${p.id}"><i data-lucide="trash-2"></i></button>` : ''}
             </td>
           </tr>`).join('')}
         </tbody>
