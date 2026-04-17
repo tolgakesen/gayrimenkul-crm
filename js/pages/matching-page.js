@@ -139,7 +139,7 @@ function matchCard({ entity, result }) {
         <div class="score-label" style="color:${scoreColor(result.overallScore)}">${labelMap[label]||label}</div>
       </div>
       <div class="match-card-body">
-        <h4 class="match-entity-name">${name}</h4>
+        <h4 class="match-entity-name">${!isClient ? `<a href="#/properties/${entity.id}" class="match-entity-link">${name}</a>` : name}</h4>
         <div class="match-entity-sub text-muted">${sub}</div>
         <div class="score-breakdown">
           ${Object.entries(result.breakdown).map(([k, v]) => `
