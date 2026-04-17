@@ -2,7 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity, getSettings } from '../storage.js';
 import { uuid, formatDateTime, formatDate, showToast, confirm, isOverdue } from '../utils.js';
 import { createModal, openModal, closeModal } from '../components/modals.js';
-import { hasPermission } from '../auth.js';
+import { hasPermission, getCurrentUser } from '../auth.js';
 
 let filterStatus = '';
 
@@ -84,6 +84,7 @@ function renderList() {
           </div>
           <div class="reminder-actions">
             ${r.status !== 'completed' && hasPermission('reminders','edit') ? `<button class="btn btn-sm btn-success btn-complete" data-id="${r.id}"><i data-lucide="check"></i> ${TR.reminder.markComplete}</button>` : ''}
+            <button class="btn btn-sm btn-ghost btn-detail-rem" data-id="${r.id}" title="Detay / Not Geçmişi"><i data-lucide="message-square"></i></button>
             ${hasPermission('reminders','edit') ? `<button class="btn btn-sm btn-ghost btn-edit-rem" data-id="${r.id}"><i data-lucide="pencil"></i></button>` : ''}
             ${hasPermission('reminders','delete') ? `<button class="btn btn-sm btn-ghost btn-delete-rem" data-id="${r.id}"><i data-lucide="trash-2"></i></button>` : ''}
           </div>
@@ -95,6 +96,7 @@ function renderList() {
   if (window.lucide) window.lucide.createIcons();
 
   document.querySelectorAll('.btn-complete').forEach(btn => btn.addEventListener('click', () => markComplete(btn.dataset.id)));
+  document.querySelectorAll('.btn-detail-rem').forEach(btn => btn.addEventListener('click', () => openReminderDetail(btn.dataset.id)));
   document.querySelectorAll('.btn-edit-rem').forEach(btn => btn.addEventListener('click', () => {
     const r = getAll('reminders').find(x=>x.id===btn.dataset.id);
     if (r) openReminderForm(r);
@@ -217,8 +219,9 @@ export function openReminderDetail(id) {
   const reminder = getAll('reminders').find(r => r.id === id);
   if (!reminder) return;
 
+  const session = getCurrentUser();
   const settings = getSettings();
-  const userName = settings.userName || 'Danışman';
+  const userName = session?.fullName || settings.userName || 'Danışman';
   const clients = getAll('clients');
   const properties = getAll('properties');
   const client = reminder.clientId ? clients.find(c => c.id === reminder.clientId) : null;
