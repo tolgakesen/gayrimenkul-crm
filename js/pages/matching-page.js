@@ -109,6 +109,13 @@ function showResults() {
     </div>
   `;
   if (window.lucide) window.lucide.createIcons();
+
+  container.querySelectorAll('[data-open-property]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const { openPropertyDetail } = await import('./properties.js');
+      openPropertyDetail(el.dataset.openProperty);
+    });
+  });
 }
 
 function matchCard({ entity, result }) {
@@ -139,7 +146,7 @@ function matchCard({ entity, result }) {
         <div class="score-label" style="color:${scoreColor(result.overallScore)}">${labelMap[label]||label}</div>
       </div>
       <div class="match-card-body">
-        <h4 class="match-entity-name">${!isClient ? `<a href="#/properties/${entity.id}" class="match-entity-link">${name}</a>` : name}</h4>
+        <h4 class="match-entity-name">${!isClient ? `<span class="match-entity-link" data-open-property="${entity.id}">${name}</span>` : name}</h4>
         <div class="match-entity-sub text-muted">${sub}</div>
         <div class="score-breakdown">
           ${Object.entries(result.breakdown).map(([k, v]) => `
