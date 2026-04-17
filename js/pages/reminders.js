@@ -235,8 +235,8 @@ export function openReminderDetail(id) {
       <div class="reminder-detail-row"><span class="detail-label">Tür</span><span class="detail-value">${typeLabels[reminder.type] || reminder.type}</span></div>
       <div class="reminder-detail-row"><span class="detail-label">Tarih/Saat</span><span class="detail-value">${formatDateTime(reminder.dueDate)}</span></div>
       <div class="reminder-detail-row"><span class="detail-label">Durum</span><span class="detail-value">${statusBadge(reminder.status)}</span></div>
-      ${client ? `<div class="reminder-detail-row"><span class="detail-label">Müşteri</span><span class="detail-value">${client.firstName} ${client.lastName}</span></div>` : ''}
-      ${property ? `<div class="reminder-detail-row"><span class="detail-label">İlan</span><span class="detail-value">${property.title}</span></div>` : ''}
+      ${client ? `<div class="reminder-detail-row"><span class="detail-label">Müşteri</span><span class="detail-value"><span class="detail-link" data-open-client="${client.id}">${client.firstName} ${client.lastName}</span></span></div>` : ''}
+      ${property ? `<div class="reminder-detail-row"><span class="detail-label">İlan</span><span class="detail-value"><span class="detail-link" data-open-property="${property.id}">${property.title}</span></span></div>` : ''}
       ${reminder.notes ? `<div class="reminder-detail-row"><span class="detail-label">Not</span><span class="detail-value">${reminder.notes}</span></div>` : ''}
     </div>
 
@@ -261,6 +261,15 @@ export function openReminderDetail(id) {
   const modal = createModal('reminder-detail-modal', reminder.title, body, footer);
   openModal('reminder-detail-modal');
   if (window.lucide) window.lucide.createIcons();
+
+  modal.querySelector('[data-open-client]')?.addEventListener('click', async () => {
+    const { openClientDetail } = await import('./clients.js');
+    openClientDetail(client.id);
+  });
+  modal.querySelector('[data-open-property]')?.addEventListener('click', async () => {
+    const { openPropertyDetail } = await import('./properties.js');
+    openPropertyDetail(property.id);
+  });
 
   modal.querySelector('#btn-save-note').addEventListener('click', () => {
     const text = modal.querySelector('#new-note-text').value.trim();

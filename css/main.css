@@ -471,6 +471,8 @@ img { max-width: 100%; }
 .reminder-detail-row { display: flex; gap: 1rem; align-items: baseline; }
 .reminder-detail-row .detail-label { font-size: .75rem; color: var(--color-text-muted); width: 80px; flex-shrink: 0; }
 .reminder-detail-row .detail-value { font-size: .875rem; font-weight: 500; }
+.detail-link { color: var(--color-primary); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.detail-link:hover { opacity: .8; }
 .link-detail { color: var(--color-primary); text-decoration: underline; }
 .link-detail:hover { opacity: .8; }
 
