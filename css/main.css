@@ -166,7 +166,10 @@ img { max-width: 100%; }
   font-weight: 600;
   font-size: 1rem;
   color: var(--color-text);
+  text-decoration: none;
+  cursor: pointer;
 }
+.topbar-title:hover { color: var(--color-primary); }
 
 .topbar-spacer { flex: 1; }
 
