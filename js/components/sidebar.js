@@ -16,10 +16,10 @@ export function renderSidebar() {
   const current = location.hash || '#/';
 
   aside.innerHTML = `
-    <div class="sidebar-brand">
+    <a href="#/" class="sidebar-brand">
       <i data-lucide="home" class="brand-icon"></i>
       <span class="brand-text">${TR.appName}</span>
-    </div>
+    </a>
     <nav class="sidebar-nav">
       ${ROUTES.map(r => `
         <a href="${r.hash}" class="nav-item ${current.startsWith(r.hash === '#/' ? '#/' : r.hash) && (r.hash === '#/' ? current === '#/' || current === '#' : true) ? 'active' : ''}" data-hash="${r.hash}">

@@ -91,7 +91,11 @@ img { max-width: 100%; }
   padding: 1.2rem 1rem;
   border-bottom: 1px solid var(--color-border);
   height: var(--topbar-height);
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
+.sidebar-brand:hover { background: var(--color-hover); }
 
 .brand-icon { width: 28px; height: 28px; color: var(--color-primary); }
 .brand-text { font-size: 1.05rem; font-weight: 700; color: #fff; white-space: nowrap; }
