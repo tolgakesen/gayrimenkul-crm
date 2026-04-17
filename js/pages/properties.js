@@ -2,7 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
 import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
-import { hasPermission } from '../auth.js';
+import { hasPermission, isAdmin } from '../auth.js';
 
 let viewMode = 'grid';
 let searchQ = '';
@@ -12,8 +12,10 @@ let currentProperty = null;
 let currentStep = 0;
 
 export function renderProperties(container) {
+  const admin = isAdmin();
   const pendingFilter = sessionStorage.getItem('dashboard_filter_status');
   if (pendingFilter !== null) { filterStatus = pendingFilter; sessionStorage.removeItem('dashboard_filter_status'); }
+  if (!admin && filterStatus !== 'active') filterStatus = 'active';
 
   container.innerHTML = `
     <div class="page-header">
@@ -22,13 +24,14 @@ export function renderProperties(container) {
     </div>
     <div class="toolbar">
       <input type="text" class="search-input" id="prop-search" placeholder="${TR.property.searchPlaceholder}" value="${searchQ}">
+      ${admin ? `
       <select class="select-input" id="prop-filter-status">
         <option value="">${TR.property.filterAll}</option>
         <option value="active">${TR.property.active}</option>
         <option value="sold">${TR.property.sold}</option>
         <option value="rented">${TR.property.rented}</option>
         <option value="withdrawn">${TR.property.withdrawn}</option>
-      </select>
+      </select>` : ''}
       <select class="select-input" id="prop-filter-type">
         <option value="">${TR.property.filterAll}</option>
         <option value="sale">${TR.property.sale}</option>
@@ -44,7 +47,10 @@ export function renderProperties(container) {
 
   if (window.lucide) window.lucide.createIcons();
 
-  document.getElementById('prop-filter-status').value = filterStatus;
+  if (admin) {
+    document.getElementById('prop-filter-status').value = filterStatus;
+    document.getElementById('prop-filter-status').addEventListener('change', e => { filterStatus = e.target.value; renderList(); });
+  }
   document.getElementById('prop-filter-type').value = filterType;
 
   document.getElementById('btn-add-property')?.addEventListener('click', () => openPropertyForm(null));
@@ -54,7 +60,6 @@ export function renderProperties(container) {
   const searchInput = document.getElementById('prop-search');
   searchInput.addEventListener('input', debounce(e => { searchQ = e.target.value; renderList(); }, 250));
 
-  document.getElementById('prop-filter-status').addEventListener('change', e => { filterStatus = e.target.value; renderList(); });
   document.getElementById('prop-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
 
   renderList();
@@ -62,11 +67,12 @@ export function renderProperties(container) {
 
 function renderList() {
   let data = getAll('properties');
+  const effectiveStatus = isAdmin() ? filterStatus : 'active';
   if (searchQ) {
     const q = searchQ.toLowerCase();
     data = data.filter(p => (p.title||'').toLowerCase().includes(q) || (p.district||'').toLowerCase().includes(q) || (p.neighborhood||'').toLowerCase().includes(q));
   }
-  if (filterStatus) data = data.filter(p => p.status === filterStatus);
+  if (effectiveStatus) data = data.filter(p => p.status === effectiveStatus);
   if (filterType) data = data.filter(p => p.listingType === filterType);
 
   const list = document.getElementById('properties-list');

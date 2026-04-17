@@ -1,16 +1,19 @@
 import { TR } from '../i18n.js';
 import { getAll, getAll as getActivity } from '../storage.js';
 import { formatPrice, formatDate, timeAgo } from '../utils.js';
+import { isAdmin } from '../auth.js';
 
 let charts = {};
 
 export function renderDashboard(container) {
-  const properties = getAll('properties');
+  const admin = isAdmin();
+  const allProperties = getAll('properties');
+  const properties = admin ? allProperties : allProperties.filter(p => p.status === 'active');
   const clients = getAll('clients');
   const reminders = getAll('reminders');
   const activity = getAll('activity');
 
-  const active = properties.filter(p => p.status === 'active').length;
+  const active = admin ? properties.filter(p => p.status === 'active').length : properties.length;
   const pending = reminders.filter(r => r.status === 'pending').length;
   const now = new Date();
   const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -28,11 +31,12 @@ export function renderDashboard(container) {
       <a href="#/properties" class="stat-card stat-card-link">
         <div class="stat-icon" style="background:var(--color-primary-soft)"><i data-lucide="building-2" style="color:var(--color-primary)"></i></div>
         <div class="stat-info">
-          <div class="stat-value">${properties.length}</div>
-          <div class="stat-label">${TR.dashboard.totalProperties}</div>
+          <div class="stat-value">${admin ? properties.length : active}</div>
+          <div class="stat-label">${admin ? TR.dashboard.totalProperties : TR.dashboard.activeProperties}</div>
         </div>
         <i data-lucide="chevron-right" class="stat-arrow"></i>
       </a>
+      ${admin ? `
       <a href="#/properties" class="stat-card stat-card-link" data-filter-status="active">
         <div class="stat-icon" style="background:var(--color-success-soft)"><i data-lucide="check-circle" style="color:var(--color-success)"></i></div>
         <div class="stat-info">
@@ -40,7 +44,7 @@ export function renderDashboard(container) {
           <div class="stat-label">${TR.dashboard.activeProperties}</div>
         </div>
         <i data-lucide="chevron-right" class="stat-arrow"></i>
-      </a>
+      </a>` : ''}
       <a href="#/clients" class="stat-card stat-card-link">
         <div class="stat-icon" style="background:var(--color-info-soft)"><i data-lucide="users" style="color:var(--color-info)"></i></div>
         <div class="stat-info">
