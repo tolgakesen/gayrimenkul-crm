@@ -115,7 +115,15 @@ function statusBadge(s) {
 }
 
 function markComplete(id) {
-  const reminders = getAll('reminders').map(r => r.id === id ? { ...r, status: 'completed' } : r);
+  const session = getCurrentUser();
+  const settings = getSettings();
+  const userName = session?.fullName || settings.userName || 'Danışman';
+  const reminders = getAll('reminders');
+  const idx = reminders.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  reminders[idx] = { ...reminders[idx], status: 'completed' };
+  if (!reminders[idx].noteLog) reminders[idx].noteLog = [];
+  reminders[idx].noteLog.push({ id: uuid(), text: 'Hatırlatıcı tamamlandı olarak işaretlendi.', createdAt: new Date().toISOString(), createdBy: userName, type: 'completed' });
   saveAll('reminders', reminders);
   showToast('Tamamlandı olarak işaretlendi');
   document.getElementById('reminders-list') && renderList();
@@ -191,6 +199,8 @@ export function openReminderForm(reminder) {
       notes: fd.get('notes'),
       status: reminder?.status || 'pending',
       notified: false,
+      voiceAlerted: false,
+      noteLog: reminder?.noteLog || [],
     };
 
     let reminders = getAll('reminders');
@@ -205,9 +215,10 @@ export function openReminderForm(reminder) {
 }
 
 function noteLogItemHTML(n) {
-  return `<div class="note-log-item">
+  const isCompleted = n.type === 'completed';
+  return `<div class="note-log-item${isCompleted ? ' note-log-completed' : ''}">
     <div class="note-log-meta">
-      <i data-lucide="user-circle"></i>
+      <i data-lucide="${isCompleted ? 'check-circle' : 'user-circle'}"></i>
       <span class="note-log-author">${n.createdBy}</span>
       <span class="note-log-time">${formatDateTime(n.createdAt)}</span>
     </div>
@@ -295,8 +306,14 @@ export function openReminderDetail(id) {
   });
 
   modal.querySelector('#detail-complete')?.addEventListener('click', () => {
-    const all = getAll('reminders').map(r => r.id === id ? { ...r, status: 'completed' } : r);
-    saveAll('reminders', all);
+    const all = getAll('reminders');
+    const idx = all.findIndex(r => r.id === id);
+    if (idx >= 0) {
+      all[idx] = { ...all[idx], status: 'completed' };
+      if (!all[idx].noteLog) all[idx].noteLog = [];
+      all[idx].noteLog.push({ id: uuid(), text: 'Hatırlatıcı tamamlandı olarak işaretlendi.', createdAt: new Date().toISOString(), createdBy: userName, type: 'completed' });
+      saveAll('reminders', all);
+    }
     closeModal('reminder-detail-modal');
     showToast('Tamamlandı olarak işaretlendi');
     if (document.getElementById('reminders-list')) renderList();
@@ -305,14 +322,25 @@ export function openReminderDetail(id) {
 
 // Browser notification checker (called from app.js)
 export function checkReminders() {
-  if (!('Notification' in window)) return;
   const reminders = getAll('reminders');
   const now = new Date();
   let changed = false;
 
   reminders.forEach(r => {
-    if (r.status === 'pending' && !r.notified && new Date(r.dueDate) <= now) {
-      if (Notification.permission === 'granted') {
+    if (r.status !== 'pending') return;
+    const due = new Date(r.dueDate);
+    const diffMs = due - now;
+
+    // Voice alert: 1 hour before (55–65 min window to catch each 60s check)
+    if (!r.voiceAlerted && diffMs > 55 * 60 * 1000 && diffMs <= 65 * 60 * 1000) {
+      speakReminderAlert(r);
+      r.voiceAlerted = true;
+      changed = true;
+    }
+
+    // Overdue / browser notification
+    if (!r.notified && due <= now) {
+      if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Hatırlatıcı: ' + r.title, { body: formatDateTime(r.dueDate), icon: '/favicon.ico' });
       }
       r.notified = true;
@@ -322,4 +350,36 @@ export function checkReminders() {
   });
 
   if (changed) saveAll('reminders', reminders);
+}
+
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {}
+}
+
+function speakReminderAlert(reminder) {
+  playBeep();
+  if (!('speechSynthesis' in window)) return;
+  const due = new Date(reminder.dueDate);
+  const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const h = due.getHours().toString().padStart(2, '0');
+  const m = due.getMinutes().toString().padStart(2, '0');
+  const text = `Hatırlatıcınız var: ${reminder.title}. Tarih: ${due.getDate()} ${months[due.getMonth()]} ${due.getFullYear()}. Saat: ${h} ${m}.`;
+  setTimeout(() => {
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'tr-TR';
+    utter.rate = 0.9;
+    window.speechSynthesis.speak(utter);
+  }, 600);
 }

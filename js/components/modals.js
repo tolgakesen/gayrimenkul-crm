@@ -27,7 +27,6 @@ export function createModal(id, title, bodyHTML, footerHTML = '') {
     </div>
   `;
   document.body.appendChild(m);
-  m.addEventListener('click', e => { if (e.target === m) closeModal(id); });
   m.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.close)));
   if (window.lucide) window.lucide.createIcons();
   return m;

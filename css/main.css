@@ -500,6 +500,8 @@ img { max-width: 100%; }
 .note-log-author { font-weight: 700; color: var(--color-text); }
 .note-log-time { margin-left: auto; }
 .note-log-text { font-size: .85rem; line-height: 1.5; }
+.note-log-completed { border-left-color: var(--color-success); }
+.note-log-completed .note-log-meta i { color: var(--color-success); }
 .add-note-section { margin-top: 1rem; border-top: 1px solid var(--color-border); padding-top: 1rem; }
 .activity-item {
   display: flex; align-items: flex-start; gap: .75rem;
