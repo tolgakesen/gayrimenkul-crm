@@ -19,7 +19,7 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <link rel="stylesheet" href="css/main.css?v=20260424">
+  <link rel="stylesheet" href="css/main.css?v=20260425">
 </head>
 <body>
   <!-- Login Screen -->
@@ -41,6 +41,10 @@
         </button>
         <a href="#/" class="topbar-title">GayriMenkul CRM</a>
         <div class="topbar-spacer"></div>
+        <div class="topbar-clock" id="topbar-clock">
+          <span id="topbar-date"></span>
+          <span id="topbar-time"></span>
+        </div>
         <a href="#/reminders" class="notif-btn" title="Hatırlatıcılar">
           <i data-lucide="bell"></i>
           <span id="notif-badge" style="display:none">0</span>
@@ -54,11 +58,28 @@
     </div>
   </div>
 
-  <script type="module" src="js/app.js?v=20260423"></script>
+  <script type="module" src="js/app.js?v=20260425"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) window.lucide.createIcons();
     });
+    (function initTopbarClock() {
+      const DAYS = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+      const MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      function tick() {
+        const now = new Date();
+        const dateEl = document.getElementById('topbar-date');
+        const timeEl = document.getElementById('topbar-time');
+        if (!dateEl || !timeEl) return;
+        dateEl.textContent = DAYS[now.getDay()] + ', ' + now.getDate() + ' ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear();
+        const h = String(now.getHours()).padStart(2,'0');
+        const m = String(now.getMinutes()).padStart(2,'0');
+        const s = String(now.getSeconds()).padStart(2,'0');
+        timeEl.textContent = h + ':' + m + ':' + s;
+      }
+      tick();
+      setInterval(tick, 1000);
+    })();
   </script>
 </body>
 </html>

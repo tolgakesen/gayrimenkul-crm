@@ -83,9 +83,7 @@ export function renderDashboard(container) {
           ${upcoming.length ? upcoming.map(r => {
             const c = r.clientId ? clients.find(x => x.id === r.clientId) : null;
             const overdue = new Date(r.dueDate) < now;
-            const in1h = new Date(now.getTime() + 60 * 60 * 1000);
-            const urgent = !overdue && new Date(r.dueDate) <= in1h;
-            return `<div class="activity-item activity-item-link${urgent ? ' reminder-alert-blink' : ''}" data-reminder-id="${r.id}">
+            return `<div class="activity-item activity-item-link${!overdue ? ' reminder-alert-blink' : ''}" data-reminder-id="${r.id}">
               <div class="activity-icon overdue"><i data-lucide="bell"></i></div>
               <div class="activity-content">
                 <div class="activity-title">${r.title}</div>
