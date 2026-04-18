@@ -642,6 +642,46 @@ img { max-width: 100%; }
 .match-card-clickable { cursor: pointer; transition: transform .15s, box-shadow .15s; }
 .match-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.15); border-color: var(--color-primary); }
 
+/* ── Holidays page ────────────────────────────── */
+.holidays-legend { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; padding:.75rem 1rem; margin-bottom:1rem; }
+.holidays-legend-note { font-size:.73rem; color:var(--color-text-muted); margin-left:.25rem; }
+.holidays-list { display:flex; flex-direction:column; gap:1rem; }
+.holidays-month-group { padding:0; overflow:hidden; }
+.holidays-month-header { font-weight:700; font-size:.95rem; padding:.65rem 1rem; background:var(--bg-hover); border-bottom:1px solid var(--color-border); letter-spacing:.03em; }
+.holiday-row { display:flex; align-items:center; gap:.75rem; padding:.55rem 1rem; border-bottom:1px solid var(--color-border); transition:background .1s; }
+.holiday-row:last-child { border-bottom:none; }
+.holiday-row:hover { background:var(--bg-hover); }
+.holiday-type-official { border-left:3px solid var(--color-danger); }
+.holiday-type-religious { border-left:3px solid var(--color-success); }
+.holiday-type-kandil    { border-left:3px solid var(--color-primary); }
+.holiday-type-special   { border-left:3px solid var(--color-info); }
+.holiday-past { opacity:.45; }
+.holiday-today { background:var(--color-primary-soft) !important; }
+.holiday-date-col { display:flex; flex-direction:column; align-items:center; min-width:40px; }
+.holiday-num { font-weight:700; font-size:1.1rem; line-height:1.2; }
+.holiday-day { font-size:.65rem; color:var(--color-text-muted); text-transform:uppercase; }
+.holiday-name-col { flex:1; display:flex; flex-direction:column; }
+.holiday-name { font-size:.88rem; font-weight:500; }
+.holiday-note { font-size:.72rem; color:var(--color-text-muted); }
+.holiday-type-badge { flex-shrink:0; }
+
+/* ── World clocks page ────────────────────────── */
+.clocks-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:.85rem; }
+.clock-card { padding:.7rem .6rem; text-align:center; display:flex; flex-direction:column; align-items:center; gap:.25rem; }
+.ck-flag { font-size:1.5rem; line-height:1; }
+.ck-name { font-size:.72rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.ck-svg { width:88px; height:88px; margin:.15rem 0; }
+.ck-bg   { fill:var(--bg-surface); }
+.ck-ring { fill:none; stroke:var(--color-border); stroke-width:1.5; }
+.ck-tick   { stroke:var(--color-text-muted); stroke-width:.7; }
+.ck-tick-h { stroke:var(--color-text); stroke-width:1.5; }
+.ck-hand-h { stroke:var(--color-text); stroke-width:4; stroke-linecap:round; }
+.ck-hand-m { stroke:var(--color-text); stroke-width:2.5; stroke-linecap:round; }
+.ck-hand-s { stroke:var(--color-danger); stroke-width:1.2; stroke-linecap:round; }
+.ck-dot    { fill:var(--color-danger); }
+.ck-time   { font-family:monospace; font-size:.75rem; color:var(--color-text-muted); letter-spacing:.04em; }
+.ck-offset { font-size:.65rem; color:var(--color-text-muted); }
+
 /* External search section */
 .ext-search-section { margin-top: 1.5rem; }
 .ext-search-header { display: flex; align-items: center; gap: .55rem; margin-bottom: .35rem; }

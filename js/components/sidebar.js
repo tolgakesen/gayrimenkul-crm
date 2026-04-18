@@ -8,7 +8,9 @@ const ROUTES = [
   { hash: '#/matching', icon: 'git-merge', label: TR.nav.matching },
   { hash: '#/reminders', icon: 'bell', label: TR.nav.reminders },
   { hash: '#/settings', icon: 'settings', label: TR.nav.settings },
-  { hash: '#/users', icon: 'user-cog', label: 'Kullanıcılar', adminOnly: true },
+  { hash: '#/users',        icon: 'user-cog',      label: 'Kullanıcılar',  adminOnly: true },
+  { hash: '#/holidays',    icon: 'calendar-heart', label: 'Özel Günler',   adminOnly: true },
+  { hash: '#/world-clocks',icon: 'clock-4',        label: 'Dünya Saati',   adminOnly: true },
 ];
 
 export function renderSidebar() {

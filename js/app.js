@@ -41,6 +41,12 @@ async function loadPage(hash) {
     } else if (hash.startsWith('#/users')) {
       const { renderUsers } = await import('./pages/users.js');
       renderUsers(main);
+    } else if (hash.startsWith('#/holidays')) {
+      const { renderHolidays } = await import('./pages/holidays.js');
+      renderHolidays(main);
+    } else if (hash.startsWith('#/world-clocks')) {
+      const { renderWorldClocks } = await import('./pages/world-clocks.js');
+      renderWorldClocks(main);
     } else {
       const { renderDashboard } = await import('./pages/dashboard.js');
       renderDashboard(main);

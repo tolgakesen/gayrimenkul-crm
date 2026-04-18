@@ -119,6 +119,12 @@ function showResults() {
       openPropertyDetail(el.dataset.openProperty);
     });
   });
+  container.querySelectorAll('[data-open-client]').forEach(el => {
+    el.addEventListener('click', async () => {
+      const { openClientDetail } = await import('./clients.js');
+      openClientDetail(el.dataset.openClient);
+    });
+  });
 }
 
 const EXTERNAL_SITES = [
@@ -195,7 +201,7 @@ function matchCard({ entity, result }) {
   const labelMap = { excellent: TR.matching.excellent, good: TR.matching.good, fair: TR.matching.fair, poor: TR.matching.poor };
 
   return `
-    <div class="match-card card${!isClient ? ' match-card-clickable' : ''}" ${!isClient ? `data-open-property="${entity.id}"` : ''}>
+    <div class="match-card card match-card-clickable" ${!isClient ? `data-open-property="${entity.id}"` : `data-open-client="${entity.id}"`}>
       <div class="match-card-score">
         <svg viewBox="0 0 36 36" class="score-circle">
           <circle class="circle-track" cx="18" cy="18" r="15" />
