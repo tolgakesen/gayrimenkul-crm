@@ -641,6 +641,32 @@ img { max-width: 100%; }
 .match-entity-name { font-weight: 700; font-size: 1rem; margin-bottom: .2rem; }
 .match-card-clickable { cursor: pointer; transition: transform .15s, box-shadow .15s; }
 .match-card-clickable:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.15); border-color: var(--color-primary); }
+
+/* External search section */
+.ext-search-section { margin-top: 1.5rem; }
+.ext-search-header { display: flex; align-items: center; gap: .55rem; margin-bottom: .35rem; }
+.ext-search-header h4 { margin: 0; font-size: 1rem; }
+.ext-search-header svg { width: 18px; height: 18px; color: var(--color-primary); }
+.ext-search-desc { font-size: .82rem; margin-bottom: .85rem; }
+.ext-criteria-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-bottom: 1rem; }
+.ext-criteria-label { font-size: .75rem; color: var(--color-text-muted); margin-right: .15rem; }
+.ext-chip { background: var(--bg-hover); border: 1px solid var(--color-border); border-radius: 99px; padding: .18rem .6rem; font-size: .78rem; font-weight: 500; }
+.ext-site-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .85rem; }
+.ext-site-card {
+  background: var(--sb);
+  border: 1.5px solid var(--sc);
+  border-radius: var(--radius);
+  padding: .9rem 1rem;
+  text-decoration: none;
+  color: var(--color-text);
+  display: flex; flex-direction: column; gap: .3rem;
+  transition: transform .15s, box-shadow .15s;
+}
+.ext-site-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,.15); }
+.ext-site-name { font-weight: 700; color: var(--sc); font-size: .95rem; }
+.ext-site-type { font-size: .74rem; color: var(--color-text-muted); }
+.ext-site-btn { margin-top: .5rem; display: flex; align-items: center; gap: .3rem; font-size: .8rem; font-weight: 600; color: var(--sc); }
+.ext-site-btn svg { width: 12px; height: 12px; }
 .match-entity-sub { font-size: .8rem; margin-bottom: .75rem; }
 .score-breakdown { display: flex; flex-direction: column; gap: .35rem; }
 .breakdown-row { display: flex; align-items: center; gap: .5rem; }

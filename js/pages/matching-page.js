@@ -75,9 +75,10 @@ function showResults() {
 
   let results = [];
   let title = '';
+  let client = null;
 
   if (mode === 'client') {
-    const client = clients.find(c => c.id === selectedId);
+    client = clients.find(c => c.id === selectedId);
     if (!client) return;
     title = `${client.firstName} ${client.lastName} için eşleşen ilanlar`;
     results = properties
@@ -98,6 +99,7 @@ function showResults() {
 
   if (!results.length) {
     container.innerHTML = `<div class="empty-state"><i data-lucide="search-x"></i><p>${TR.matching.noResults} (min. ${minScore}%)</p></div>`;
+    if (mode === 'client' && client) container.insertAdjacentHTML('beforeend', buildExternalSection(client));
     if (window.lucide) window.lucide.createIcons();
     return;
   }
@@ -107,6 +109,7 @@ function showResults() {
     <div class="match-list">
       ${results.map(m => matchCard(m)).join('')}
     </div>
+    ${mode === 'client' && client ? buildExternalSection(client) : ''}
   `;
   if (window.lucide) window.lucide.createIcons();
 
@@ -116,6 +119,67 @@ function showResults() {
       openPropertyDetail(el.dataset.openProperty);
     });
   });
+}
+
+const EXTERNAL_SITES = [
+  { name: 'Sahibinden', color: '#FF6200', bg: 'rgba(255,98,0,.1)',
+    saleUrl: 'https://www.sahibinden.com/satilik-daire',
+    rentUrl: 'https://www.sahibinden.com/kiralik-daire' },
+  { name: 'Hepsiemlak', color: '#E30613', bg: 'rgba(227,6,19,.08)',
+    saleUrl: 'https://www.hepsiemlak.com/satilik-konut',
+    rentUrl: 'https://www.hepsiemlak.com/kiralik-konut' },
+  { name: 'Emlakjet', color: '#00A3DA', bg: 'rgba(0,163,218,.08)',
+    saleUrl: 'https://www.emlakjet.com/satilik-daire/',
+    rentUrl: 'https://www.emlakjet.com/kiralik-daire/' },
+  { name: 'Zingat', color: '#6C2FD9', bg: 'rgba(108,47,217,.08)',
+    saleUrl: 'https://www.zingat.com/satilik-konut',
+    rentUrl: 'https://www.zingat.com/kiralik-konut' },
+];
+
+function buildExternalSection(client) {
+  const isRent = client.listingTypePreference === 'rent';
+  const typeLabel = isRent ? 'Kiralık' : 'Satılık';
+  const criteria = buildCriteriaSummary(client);
+
+  return `
+    <div class="ext-search-section card">
+      <div class="ext-search-header">
+        <i data-lucide="globe"></i>
+        <h4>Harici Site Aramaları</h4>
+      </div>
+      <p class="ext-search-desc text-muted">Portföyünüzde eşleşme bulunamadı veya daha fazla seçenek görmek istiyorsanız aşağıdaki sitelerden arama yapabilirsiniz.</p>
+      ${criteria ? `<div class="ext-criteria-bar"><span class="ext-criteria-label">Arama kriterleri:</span>${criteria}</div>` : ''}
+      <div class="ext-site-grid">
+        ${EXTERNAL_SITES.map(s => `
+          <a href="${isRent ? s.rentUrl : s.saleUrl}" target="_blank" rel="noopener noreferrer"
+             class="ext-site-card" style="--sc:${s.color};--sb:${s.bg}">
+            <div class="ext-site-name">${s.name}</div>
+            <div class="ext-site-type">${typeLabel} İlan</div>
+            <div class="ext-site-btn">Ara <i data-lucide="external-link"></i></div>
+          </a>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function buildCriteriaSummary(client) {
+  const chips = [];
+  if (client.preferredDistricts?.length)
+    chips.push(...client.preferredDistricts.map(d => `<span class="ext-chip">${d}</span>`));
+  if (client.desiredRoomCounts?.length)
+    chips.push(...client.desiredRoomCounts.map(r => `<span class="ext-chip">${r}</span>`));
+  if (client.budgetMin || client.budgetMax) {
+    const min = client.budgetMin ? formatPrice(client.budgetMin) : '';
+    const max = client.budgetMax ? formatPrice(client.budgetMax) : '';
+    chips.push(`<span class="ext-chip">${min && max ? min + ' – ' + max : min || max}</span>`);
+  }
+  if (client.desiredMinM2 || client.desiredMaxM2) {
+    const min = client.desiredMinM2 || '';
+    const max = client.desiredMaxM2 || '';
+    chips.push(`<span class="ext-chip">${min}${min && max ? '–' : ''}${max} m²</span>`);
+  }
+  return chips.join('');
 }
 
 function matchCard({ entity, result }) {
