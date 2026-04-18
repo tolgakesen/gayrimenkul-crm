@@ -209,6 +209,16 @@ function openPropertyForm(property) {
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label>Enlem (Lat) <small class="form-hint"><a href="https://maps.google.com" target="_blank" rel="noopener">Google Maps'ten al</a></small></label>
+            <input type="number" step="any" name="lat" value="${property?.lat||''}" class="input-field" placeholder="41.0082">
+          </div>
+          <div class="form-group">
+            <label>Boylam (Lon)</label>
+            <input type="number" step="any" name="lon" value="${property?.lon||''}" class="input-field" placeholder="28.9784">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label>${TR.property.listingType}</label>
             <select name="listingType" class="select-input">
               <option value="sale" ${(!property||property.listingType==='sale')?'selected':''}>${TR.property.sale}</option>
@@ -398,6 +408,8 @@ function saveProperty(modal, photoData, editId) {
     hasDASK: !!form.querySelector('input[name="hasDASK"]')?.checked,
     zoningStatus: get('zoningStatus'),
     commissionRate: parseFloat(get('commissionRate')) || null,
+    lat: parseFloat(get('lat')) || null,
+    lon: parseFloat(get('lon')) || null,
     owner: { name: get('ownerName')?.trim(), phone: get('ownerPhone')?.trim(), notes: get('ownerNotes') },
     meetingHistory: editId ? (getAll('properties').find(p=>p.id===editId)?.meetingHistory||[]) : [],
   };

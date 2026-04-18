@@ -136,7 +136,7 @@ function deleteReminder(id) {
   renderList();
 }
 
-export function openReminderForm(reminder) {
+export function openReminderForm(reminder, onSaveCallback) {
   const clients = getAll('clients');
   const properties = getAll('properties');
   const isEdit = !!reminder;
@@ -210,7 +210,8 @@ export function openReminderForm(reminder) {
     logActivity('reminder_add', `Hatırlatıcı: ${title}`, data.id);
     closeModal('reminder-modal');
     showToast(isEdit ? 'Hatırlatıcı güncellendi' : 'Hatırlatıcı eklendi');
-    renderList();
+    if (onSaveCallback) onSaveCallback();
+    else renderList();
   });
 }
 

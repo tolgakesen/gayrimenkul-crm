@@ -35,6 +35,18 @@ async function loadPage(hash) {
         const reminder = getAll('reminders').find(r => r.id === id);
         if (reminder) openReminderForm(reminder);
       }
+    } else if (hash.startsWith('#/pipeline')) {
+      const { renderPipeline } = await import('./pages/pipeline.js');
+      renderPipeline(main);
+    } else if (hash.startsWith('#/calendar')) {
+      const { renderCalendar } = await import('./pages/calendar.js');
+      renderCalendar(main);
+    } else if (hash.startsWith('#/map')) {
+      const { renderMapView } = await import('./pages/map-view.js');
+      renderMapView(main);
+    } else if (hash.startsWith('#/reports')) {
+      const { renderReports } = await import('./pages/reports.js');
+      renderReports(main);
     } else if (hash.startsWith('#/settings')) {
       const { renderSettings } = await import('./pages/settings.js');
       renderSettings(main);

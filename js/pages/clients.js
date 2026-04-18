@@ -7,6 +7,7 @@ import { hasPermission } from '../auth.js';
 let searchQ = '';
 let filterType = '';
 let filterPriority = '';
+let filterSegment = '';
 let currentStep = 0;
 
 export function renderClients(container) {
@@ -30,6 +31,13 @@ export function renderClients(container) {
         <option value="medium">${TR.client.medium}</option>
         <option value="low">${TR.client.low}</option>
       </select>
+      <select class="select-input" id="client-filter-segment">
+        <option value="">${TR.common.all} Segment</option>
+        <option value="hot">🔥 Sıcak</option>
+        <option value="warm">🌤 Ilık</option>
+        <option value="cold">❄️ Soğuk</option>
+        <option value="lost">💤 Kaybedildi</option>
+      </select>
     </div>
     <div id="clients-list"></div>
   `;
@@ -37,11 +45,13 @@ export function renderClients(container) {
   if (window.lucide) window.lucide.createIcons();
   document.getElementById('client-filter-type').value = filterType;
   document.getElementById('client-filter-priority').value = filterPriority;
+  document.getElementById('client-filter-segment').value = filterSegment;
 
   document.getElementById('btn-add-client')?.addEventListener('click', () => openClientForm(null));
   document.getElementById('client-search').addEventListener('input', debounce(e => { searchQ = e.target.value; renderList(); }, 250));
   document.getElementById('client-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
   document.getElementById('client-filter-priority').addEventListener('change', e => { filterPriority = e.target.value; renderList(); });
+  document.getElementById('client-filter-segment').addEventListener('change', e => { filterSegment = e.target.value; renderList(); });
 
   renderList();
 }
@@ -54,6 +64,7 @@ function renderList() {
   }
   if (filterType) data = data.filter(c => c.clientType === filterType);
   if (filterPriority) data = data.filter(c => c.priorityLevel === filterPriority);
+  if (filterSegment) data = data.filter(c => c.segment === filterSegment);
 
   const list = document.getElementById('clients-list');
   if (!list) return;
@@ -65,7 +76,7 @@ function renderList() {
   }
 
   list.innerHTML = `<div class="table-wrapper"><table class="table"><thead><tr>
-    <th>Ad Soyad</th><th>Telefon</th><th>Tip</th><th>Bütçe</th><th>Öncelik</th><th>Karar</th><th>${TR.common.actions}</th>
+    <th>Ad Soyad</th><th>Telefon</th><th>Tip</th><th>Bütçe</th><th>Öncelik</th><th>Segment</th><th>Aşama</th><th>${TR.common.actions}</th>
   </tr></thead><tbody>
     ${data.map(c => `<tr>
       <td><strong>${c.firstName} ${c.lastName}</strong></td>
@@ -73,7 +84,8 @@ function renderList() {
       <td><span class="badge badge-outline">${typeLabel(c.clientType)}</span></td>
       <td>${c.budgetMin||c.budgetMax ? (c.budgetMin?formatPrice(c.budgetMin):'')+'–'+(c.budgetMax?formatPrice(c.budgetMax):'') : '—'}</td>
       <td>${priorityBadge(c.priorityLevel)}</td>
-      <td>${stageLabel(c.decisionStage)}</td>
+      <td>${segmentBadge(c.segment)}</td>
+      <td>${pipelineStageBadge(c.pipelineStage)}</td>
       <td class="actions-cell">
         <button class="btn btn-sm btn-ghost btn-view" data-id="${c.id}"><i data-lucide="eye"></i></button>
         ${hasPermission('clients','edit') ? `<button class="btn btn-sm btn-ghost btn-edit" data-id="${c.id}"><i data-lucide="pencil"></i></button>` : ''}
@@ -98,6 +110,18 @@ function priorityBadge(p) {
   const labels = { low: TR.client.low, medium: TR.client.medium, high: TR.client.high, urgent: TR.client.urgent };
   return `<span class="badge badge-${map[p]||'secondary'}">${labels[p]||p}</span>`;
 }
+function segmentBadge(s) {
+  if (!s) return '<span class="badge badge-secondary">—</span>';
+  const map = { hot: 'danger', warm: 'warning', cold: 'info', lost: 'secondary' };
+  const icons = { hot: '🔥', warm: '🌤', cold: '❄️', lost: '💤' };
+  return `<span class="badge badge-${map[s]||'secondary'}">${icons[s]||''} ${TR.segment?.[s]||s}</span>`;
+}
+function pipelineStageBadge(s) {
+  if (!s) return '<span class="badge badge-secondary">Lead</span>';
+  const map = { lead: 'secondary', contacted: 'info', offer: 'warning', contract: 'primary', closed: 'success', lost: 'danger' };
+  return `<span class="badge badge-${map[s]||'secondary'}">${TR.pipeline?.[s]||s}</span>`;
+}
+const sourceLabel = s => ({ referral: 'Referans', portal: 'Portal', social: 'Sosyal Medya', direct: 'Direkt', other: 'Diğer' }[s] || '—');
 
 function deleteClient(id) {
   if (!confirm(TR.client.deleteConfirm)) return;
@@ -147,7 +171,42 @@ function openClientForm(client) {
         </div>
         <div class="form-group"><label>${TR.client.firstMeetingDate}</label><input type="date" name="firstMeetingDate" value="${client?.firstMeetingDate||''}" class="input-field"></div>
         <div class="form-row">
+          <div class="form-group">
+            <label>Segment</label>
+            <select name="segment" class="select-input">
+              <option value="">Seçilmedi</option>
+              <option value="hot" ${client?.segment==='hot'?'selected':''}>🔥 Sıcak</option>
+              <option value="warm" ${(!client||client.segment==='warm'||!client.segment)?'selected':''}>🌤 Ilık</option>
+              <option value="cold" ${client?.segment==='cold'?'selected':''}>❄️ Soğuk</option>
+              <option value="lost" ${client?.segment==='lost'?'selected':''}>💤 Kaybedildi</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Kaynak</label>
+            <select name="source" class="select-input">
+              <option value="other" ${(!client||client.source==='other'||!client.source)?'selected':''}>Diğer</option>
+              <option value="referral" ${client?.source==='referral'?'selected':''}>Referans</option>
+              <option value="portal" ${client?.source==='portal'?'selected':''}>Portal</option>
+              <option value="social" ${client?.source==='social'?'selected':''}>Sosyal Medya</option>
+              <option value="direct" ${client?.source==='direct'?'selected':''}>Direkt</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Satış Aşaması</label>
+            <select name="pipelineStage" class="select-input">
+              <option value="lead" ${(!client||client.pipelineStage==='lead'||!client.pipelineStage)?'selected':''}>Potansiyel Lead</option>
+              <option value="contacted" ${client?.pipelineStage==='contacted'?'selected':''}>İlk Görüşme</option>
+              <option value="offer" ${client?.pipelineStage==='offer'?'selected':''}>Teklif Aşaması</option>
+              <option value="contract" ${client?.pipelineStage==='contract'?'selected':''}>Sözleşme</option>
+              <option value="closed" ${client?.pipelineStage==='closed'?'selected':''}>Kapandı</option>
+              <option value="lost" ${client?.pipelineStage==='lost'?'selected':''}>Kaybedildi</option>
+            </select>
+          </div>
           <div class="form-group"><label>Meslek</label><input type="text" name="occupation" value="${client?.occupation||''}" class="input-field" placeholder="Örn: Mühendis"></div>
+        </div>
+        <div class="form-row">
           <div class="form-group"><label>Doğum Günü</label><input type="date" name="birthday" value="${client?.birthday||''}" class="input-field"></div>
         </div>
         <div class="form-group"><label>${TR.client.notes}</label><textarea name="notes" rows="2" class="textarea-input">${client?.notes||''}</textarea></div>
@@ -295,6 +354,11 @@ function saveClient(modal, editId) {
     notes: get('notes'),
     occupation: get('occupation')?.trim() || null,
     birthday: get('birthday') || null,
+    segment: get('segment') || 'warm',
+    source: get('source') || 'other',
+    pipelineStage: get('pipelineStage') || 'lead',
+    pipelineHistory: editId ? (getAll('clients').find(c=>c.id===editId)?.pipelineHistory||[]) : [],
+    noteLog: editId ? (getAll('clients').find(c=>c.id===editId)?.noteLog||[]) : [],
     budgetMin: parseFloat(get('budgetMin')) || null,
     budgetMax: parseFloat(get('budgetMax')) || null,
     preferredDistricts, preferredNeighborhoods,
@@ -364,6 +428,9 @@ export function openClientDetail(id) {
             ${dRow('Beyan Gelir', client.declaredIncome ? formatPrice(client.declaredIncome)+'/ay' : '—')}
             ${dRow('Meslek', client.occupation||'—')}
             ${dRow('Doğum Günü', formatDate(client.birthday))}
+            ${dRow('Segment', segmentBadge(client.segment))}
+            ${dRow('Kaynak', sourceLabel(client.source))}
+            ${dRow('Satış Aşaması', pipelineStageBadge(client.pipelineStage))}
           </div>
           ${client.notes ? `<div class="notes-box"><strong>Not:</strong> ${client.notes}</div>` : ''}
         </div>

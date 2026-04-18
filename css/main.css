@@ -951,4 +951,217 @@ img { max-width: 100%; }
   .step-label { display: none; }
   .property-card-actions { flex-wrap: wrap; gap: .35rem; }
   .perm-actions { flex-direction: column; gap: .35rem; }
+  .pipeline-board { gap: .5rem; }
+  .pipeline-col { min-width: 160px; flex: 0 0 160px; }
+  .pipeline-card-actions { flex-direction: column; gap: .25rem; }
+  .reports-stat-grid { grid-template-columns: 1fr 1fr; }
+  .reports-grid { grid-template-columns: 1fr; }
+  .cal-day { min-height: 52px; padding: .2rem; }
+  .cal-event { display: none; }
+  .cal-day-has-events::after { content: '●'; display: block; text-align: center; font-size: .6rem; color: var(--color-warning); margin-top: 2px; }
+  .cal-month-label { min-width: 110px; font-size: .9rem; }
 }
+
+/* ===== PIPELINE / SATIŞ HUNİSİ ===== */
+.pipeline-board {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1.5rem;
+  min-height: 60vh;
+  align-items: flex-start;
+}
+.pipeline-col {
+  min-width: 200px;
+  max-width: 240px;
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.pipeline-col-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .6rem .75rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: .85rem;
+}
+.pipeline-col-header i { width: 16px; height: 16px; }
+.pipeline-count {
+  margin-left: auto;
+  background: rgba(0,0,0,.15);
+  border-radius: 10px;
+  padding: 0 .5rem;
+  font-size: .75rem;
+}
+.pipeline-col-header-secondary { background: rgba(107,114,128,.15); color: var(--color-text-muted); }
+.pipeline-col-header-info { background: rgba(14,165,233,.15); color: #0ea5e9; }
+.pipeline-col-header-warning { background: rgba(245,158,11,.15); color: var(--color-warning); }
+.pipeline-col-header-primary { background: var(--color-primary-soft); color: var(--color-primary); }
+.pipeline-col-header-success { background: var(--color-success-soft); color: var(--color-success); }
+.pipeline-col-header-danger { background: rgba(239,68,68,.12); color: var(--color-danger); }
+
+.pipeline-col-body {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  min-height: 80px;
+  padding: .4rem;
+  border-radius: var(--radius);
+  border: 2px dashed transparent;
+  transition: border-color var(--transition), background var(--transition);
+}
+.pipeline-col-body.drag-over {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.pipeline-empty {
+  color: var(--color-text-muted);
+  font-size: .8rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+.pipeline-card {
+  background: var(--bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: .65rem .75rem;
+  cursor: grab;
+  transition: box-shadow var(--transition), opacity var(--transition);
+}
+.pipeline-card:hover { box-shadow: var(--shadow-md); }
+.pipeline-card.dragging { opacity: .5; cursor: grabbing; }
+.pipeline-card-name { font-weight: 600; font-size: .85rem; margin-bottom: .25rem; }
+.pipeline-card-meta { font-size: .75rem; color: var(--color-text-muted); display: flex; flex-direction: column; gap: .1rem; margin-bottom: .35rem; }
+.pipeline-card-tags { display: flex; align-items: center; gap: .35rem; margin-bottom: .4rem; }
+.pipeline-seg-icon { font-size: 1rem; }
+.badge-sm { font-size: .65rem; padding: .1rem .3rem; }
+.pipeline-card-actions { display: flex; align-items: center; gap: .35rem; }
+.select-sm { font-size: .75rem; padding: .2rem .4rem; flex: 1; }
+.btn-xs { padding: .15rem .3rem; font-size: .75rem; }
+
+/* ===== RAPORLAR ===== */
+.reports-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.report-card .card-body { padding: 1rem; }
+.report-chart-container { position: relative; height: 250px; }
+
+/* ===== HARİTA ===== */
+#property-map {
+  height: calc(100vh - 220px);
+  min-height: 400px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  z-index: 0;
+}
+.map-pin-marker {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .65rem;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.map-popup { font-family: 'Inter', sans-serif; font-size: .8rem; min-width: 160px; line-height: 1.4; }
+.map-popup strong { font-size: .9rem; display: block; margin-bottom: .3rem; }
+.map-popup-badge { display: inline-block; padding: .1rem .4rem; border-radius: 3px; color: #fff; font-size: .7rem; }
+.leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+}
+.leaflet-popup-tip { background: var(--bg-card); }
+.leaflet-popup-close-button { color: var(--color-text-muted) !important; }
+.map-coords-hint { display: flex; align-items: center; gap: .3rem; }
+
+/* ===== TAKVİM ===== */
+.calendar-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+.cal-month-nav {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.cal-month-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  min-width: 160px;
+  text-align: center;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  background: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.cal-weekday {
+  background: var(--bg-card);
+  padding: .4rem;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.cal-day {
+  background: var(--bg-card);
+  min-height: 80px;
+  padding: .3rem;
+  cursor: pointer;
+  transition: background var(--transition);
+  position: relative;
+}
+.cal-day:hover { background: var(--bg-hover); }
+.cal-day-today { background: var(--color-primary-soft); }
+.cal-day-today .cal-day-num { color: var(--color-primary); font-weight: 700; }
+.cal-day-past { opacity: .65; }
+.cal-day-other-month { background: var(--bg); opacity: .3; cursor: default; }
+.cal-day-num { font-size: .78rem; font-weight: 500; margin-bottom: .2rem; }
+.cal-events { display: flex; flex-direction: column; gap: 2px; }
+.cal-event {
+  font-size: .68rem;
+  padding: .1rem .3rem;
+  border-radius: 3px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity var(--transition);
+}
+.cal-event:hover { opacity: .8; }
+.cal-event-pending { background: var(--color-warning-soft); color: var(--color-warning); }
+.cal-event-overdue { background: rgba(239,68,68,.15); color: var(--color-danger); }
+.cal-event-completed { background: var(--color-success-soft); color: var(--color-success); }
+.cal-overflow { font-size: .65rem; color: var(--color-text-muted); padding: 0 .2rem; }
+.cal-legend {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: .75rem;
+  font-size: .8rem;
+}
+.cal-legend-item { display: flex; align-items: center; gap: .35rem; color: var(--color-text-muted); }
+
+/* form-hint link */
+.form-hint a { color: var(--color-primary); font-size: .75rem; }

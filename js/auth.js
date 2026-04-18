@@ -143,6 +143,10 @@ export function defaultPermissions() {
     clients: { view: true, add: true, edit: true, delete: false },
     reminders: { view: true, add: true, edit: true, delete: false },
     matching: { view: true },
+    pipeline: { view: true },
+    calendar: { view: true },
+    map: { view: true },
+    reports: { view: false },
     settings: { view: false },
   };
 }
@@ -152,5 +156,9 @@ export const PERMISSION_LABELS = {
   clients: { label: 'Müşteriler', actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' } },
   reminders: { label: 'Hatırlatıcılar', actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' } },
   matching: { label: 'Eşleştirme', actions: { view: 'Görüntüle' } },
+  pipeline: { label: 'Satış Hunisi', actions: { view: 'Görüntüle' } },
+  calendar: { label: 'Takvim', actions: { view: 'Görüntüle' } },
+  map: { label: 'Harita', actions: { view: 'Görüntüle' } },
+  reports: { label: 'Raporlar', actions: { view: 'Görüntüle' } },
   settings: { label: 'Ayarlar', actions: { view: 'Görüntüle' } },
 };
