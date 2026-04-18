@@ -466,6 +466,14 @@ img { max-width: 100%; }
   padding-right: .5rem;
 }
 .activity-item-link:hover { background: var(--bg-hover); }
+@keyframes blink-red {
+  0%, 100% { background: transparent; }
+  50% { background: rgba(239,68,68,.18); }
+}
+.reminder-alert-blink {
+  animation: blink-red 1s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
 .activity-arrow { width: 14px; height: 14px; color: var(--color-text-muted); flex-shrink: 0; margin-left: auto; }
 .detail-reminder { display: flex; flex-direction: column; gap: .75rem; }
 .reminder-detail-row { display: flex; gap: 1rem; align-items: baseline; }

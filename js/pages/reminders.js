@@ -199,7 +199,7 @@ export function openReminderForm(reminder) {
       notes: fd.get('notes'),
       status: reminder?.status || 'pending',
       notified: false,
-      voiceAlerted: false,
+      lastVoiceAlertAt: null,
       noteLog: reminder?.noteLog || [],
     };
 
@@ -331,11 +331,14 @@ export function checkReminders() {
     const due = new Date(r.dueDate);
     const diffMs = due - now;
 
-    // Voice alert: 1 hour before (55–65 min window to catch each 60s check)
-    if (!r.voiceAlerted && diffMs > 55 * 60 * 1000 && diffMs <= 65 * 60 * 1000) {
-      speakReminderAlert(r);
-      r.voiceAlerted = true;
-      changed = true;
+    // Voice alert: first at 1 hour before, then every 5 min until overdue
+    if (due > now && diffMs <= 65 * 60 * 1000) {
+      const lastAlert = r.lastVoiceAlertAt ? new Date(r.lastVoiceAlertAt) : null;
+      if (!lastAlert || (now - lastAlert) >= 5 * 60 * 1000) {
+        speakReminderAlert(r);
+        r.lastVoiceAlertAt = now.toISOString();
+        changed = true;
+      }
     }
 
     // Overdue / browser notification

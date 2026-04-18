@@ -82,8 +82,10 @@ export function renderDashboard(container) {
         <div class="card-body">
           ${upcoming.length ? upcoming.map(r => {
             const c = r.clientId ? clients.find(x => x.id === r.clientId) : null;
-            const overdue = new Date(r.dueDate) < new Date();
-            return `<div class="activity-item activity-item-link" data-reminder-id="${r.id}">
+            const overdue = new Date(r.dueDate) < now;
+            const in1h = new Date(now.getTime() + 60 * 60 * 1000);
+            const urgent = !overdue && new Date(r.dueDate) <= in1h;
+            return `<div class="activity-item activity-item-link${urgent ? ' reminder-alert-blink' : ''}" data-reminder-id="${r.id}">
               <div class="activity-icon overdue"><i data-lucide="bell"></i></div>
               <div class="activity-content">
                 <div class="activity-title">${r.title}</div>
@@ -95,7 +97,7 @@ export function renderDashboard(container) {
         </div>
       </div>
 
-      <div class="card">
+      ${admin ? `<div class="card">
         <div class="card-header"><h3>${TR.dashboard.recentActivity}</h3></div>
         <div class="card-body">
           ${activity.length ? activity.slice(0,8).map(a => `
@@ -108,7 +110,7 @@ export function renderDashboard(container) {
             </div>
           `).join('') : `<p class="text-muted">${TR.dashboard.noActivity}</p>`}
         </div>
-      </div>
+      </div>` : ''}
     </div>
   `;
 
