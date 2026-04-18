@@ -468,7 +468,7 @@ img { max-width: 100%; }
 .activity-item-link:hover { background: var(--bg-hover); }
 @keyframes blink-red {
   0%, 100% { background: transparent; }
-  50% { background: rgba(239,68,68,.18); }
+  50% { background: rgba(252,52,12,.22); }
 }
 .reminder-alert-blink {
   animation: blink-red 1s ease-in-out infinite;
