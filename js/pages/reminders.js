@@ -336,6 +336,7 @@ export function checkReminders() {
       const lastAlert = r.lastVoiceAlertAt ? new Date(r.lastVoiceAlertAt) : null;
       if (!lastAlert || (now - lastAlert) >= 5 * 60 * 1000) {
         speakReminderAlert(r);
+        if (!lastAlert) showReminderAlertPopup(r); // popup only on first alert
         r.lastVoiceAlertAt = now.toISOString();
         changed = true;
       }
@@ -385,4 +386,38 @@ function speakReminderAlert(reminder) {
     utter.rate = 0.9;
     window.speechSynthesis.speak(utter);
   }, 600);
+}
+
+function showReminderAlertPopup(reminder) {
+  const due = new Date(reminder.dueDate);
+  const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  const dateStr = `${due.getDate()} ${months[due.getMonth()]} ${due.getFullYear()}, ${due.getHours().toString().padStart(2,'0')}:${due.getMinutes().toString().padStart(2,'0')}`;
+  const client = reminder.clientId ? (getAll('clients').find(c => c.id === reminder.clientId)) : null;
+  const property = reminder.propertyId ? (getAll('properties').find(p => p.id === reminder.propertyId)) : null;
+
+  const modalId = 'rem-alert-' + reminder.id;
+  const body = `
+    <div class="reminder-alert-popup">
+      <div class="reminder-alert-icon"><i data-lucide="bell-ring"></i></div>
+      <div class="reminder-alert-title">${reminder.title}</div>
+      <div class="reminder-alert-meta"><i data-lucide="clock"></i> ${dateStr}</div>
+      ${client ? `<div class="reminder-alert-meta"><i data-lucide="user"></i> ${client.firstName} ${client.lastName}</div>` : ''}
+      ${property ? `<div class="reminder-alert-meta"><i data-lucide="building-2"></i> ${property.title}</div>` : ''}
+    </div>
+  `;
+  const footer = `
+    <button class="btn btn-ghost" id="rap-dismiss">Kapat</button>
+    <button class="btn btn-primary" id="rap-detail">Detayı Göster</button>
+  `;
+
+  const modal = createModal(modalId, 'Hatırlatıcı Uyarısı', body, footer);
+  modal.querySelector('.modal').classList.add('modal-alert');
+  openModal(modalId);
+  if (window.lucide) window.lucide.createIcons();
+
+  modal.querySelector('#rap-dismiss').addEventListener('click', () => closeModal(modalId));
+  modal.querySelector('#rap-detail').addEventListener('click', () => {
+    closeModal(modalId);
+    openReminderDetail(reminder.id);
+  });
 }

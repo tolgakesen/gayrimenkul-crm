@@ -474,6 +474,14 @@ img { max-width: 100%; }
   animation: blink-red 1s ease-in-out infinite;
   border-radius: var(--radius-sm);
 }
+.modal-alert .modal-header { background: rgba(239,68,68,.08); border-bottom-color: rgba(239,68,68,.35); }
+.modal-alert .modal-title { color: var(--color-danger); }
+.reminder-alert-popup { text-align: center; padding: .75rem 0 .25rem; }
+.reminder-alert-icon { margin-bottom: .75rem; }
+.reminder-alert-icon svg { width: 48px; height: 48px; color: var(--color-danger); }
+.reminder-alert-title { font-size: 1.2rem; font-weight: 700; margin-bottom: .6rem; }
+.reminder-alert-meta { display: flex; align-items: center; justify-content: center; gap: .4rem; color: var(--color-text-muted); font-size: .88rem; margin-top: .3rem; }
+.reminder-alert-meta svg { width: 14px; height: 14px; flex-shrink: 0; }
 .activity-arrow { width: 14px; height: 14px; color: var(--color-text-muted); flex-shrink: 0; margin-left: auto; }
 .detail-reminder { display: flex; flex-direction: column; gap: .75rem; }
 .reminder-detail-row { display: flex; gap: 1rem; align-items: baseline; }
