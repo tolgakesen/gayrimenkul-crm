@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Demo Verisi Yükle</title>
+<style>
+  body { font-family: sans-serif; background: #111; color: #eee; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .card { background: #1e1e1e; border: 1px solid #333; border-radius: 12px; padding: 2rem; max-width: 480px; width: 100%; text-align: center; }
+  h2 { margin-top: 0; color: #f59e0b; }
+  .info { color: #aaa; font-size: .9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+  .btn { display: inline-block; padding: .75rem 2rem; background: #f59e0b; color: #111; border: none; border-radius: 8px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background .2s; }
+  .btn:hover { background: #d97706; }
+  .btn-danger { background: #ef4444; color: #fff; margin-left: .5rem; }
+  .btn-danger:hover { background: #dc2626; }
+  .result { margin-top: 1rem; padding: .75rem; border-radius: 8px; font-size: .9rem; }
+  .result.ok { background: #14532d; color: #86efac; }
+  .result.err { background: #450a0a; color: #fca5a5; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>🏠 Demo Verisi Yükle</h2>
+  <p class="info">
+    Bu sayfa localStorage'a demo verisi yükler:<br>
+    <strong>20 portföy</strong> (10 satılık + 10 kiralık)<br>
+    <strong>100 müşteri</strong> (farklı segment/aşama/profil)<br><br>
+    <span style="color:#ef4444">⚠ Mevcut veriler korunur, ekleme yapılır.</span>
+  </p>
+  <button class="btn" onclick="loadSeedData()">Veriyi Yükle</button>
+  <button class="btn btn-danger" onclick="clearAll()">Tümünü Sil</button>
+  <div id="result"></div>
+</div>
+
+<script>
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function iso(daysAgo = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString();
+}
+
+function dateStr(daysAgo = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+const PROPERTIES = [
+  // --- SATILIK (10) ---
+  {
+    id: uuid(), createdAt: iso(180), updatedAt: iso(5),
+    title: 'Moda Deniz Manzaralı 3+1 Daire', price: 12500000,
+    squareMeters: 125, roomCount: '3+1', floor: 4, totalFloors: 8,
+    district: 'Kadıköy', neighborhood: 'Moda',
+    listingType: 'sale', status: 'active',
+    buildingAge: 8, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: true, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'güney',
+    monthlyDues: 1500, features: ['balkon', 'otopark', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 40.9862, lon: 29.0267,
+    notes: 'Deniz manzarası harika. Çarşıya yürüme mesafesi.',
+    owner: { name: 'Mehmet Yılmaz', phone: '0532 111 2233', notes: 'Yurt dışında yaşıyor, vekil yetkisi var.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(120), updatedAt: iso(3),
+    title: 'Levent Merkez 2+1 Yeni Bina', price: 8900000,
+    squareMeters: 85, roomCount: '2+1', floor: 12, totalFloors: 18,
+    district: 'Beşiktaş', neighborhood: 'Levent',
+    listingType: 'sale', status: 'active',
+    buildingAge: 2, heatingType: 'merkezi',
+    hasBalcony: true, hasParking: true, hasElevator: true, isGatedCommunity: true,
+    furnishing: 'furnished', facadeDirection: 'kuzey',
+    monthlyDues: 2200, features: ['balkon', 'otopark', 'asansör', 'güvenlik'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 41.0824, lon: 29.0133,
+    notes: 'Metro çıkışına 3 dakika. Tam eşyalı teslim.',
+    owner: { name: 'Selin Arslan', phone: '0542 223 3344', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(90), updatedAt: iso(1),
+    title: 'Nişantaşı Prestijli 4+1 Geniş Daire', price: 25000000,
+    squareMeters: 180, roomCount: '4+1', floor: 3, totalFloors: 6,
+    district: 'Şişli', neighborhood: 'Nişantaşı',
+    listingType: 'sale', status: 'sold',
+    buildingAge: 15, heatingType: 'dogalgaz',
+    hasBalcony: false, hasParking: true, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'batı',
+    monthlyDues: 3000, features: ['otopark', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1.5,
+    lat: 41.0502, lon: 28.9945,
+    notes: 'Prestijli lokasyon. Dükkan ve ofis dönüşümüne uygun.',
+    owner: { name: 'Ayşe Kara', phone: '0555 334 4455', notes: 'Süratle satmak istiyor.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(60), updatedAt: iso(10),
+    title: 'Ataköy 3+1 Denize Sıfır Site', price: 9800000,
+    squareMeters: 110, roomCount: '3+1', floor: 6, totalFloors: 12,
+    district: 'Bakırköy', neighborhood: 'Ataköy',
+    listingType: 'sale', status: 'active',
+    buildingAge: 12, heatingType: 'merkezi',
+    hasBalcony: true, hasParking: true, hasElevator: true, isGatedCommunity: true,
+    furnishing: 'semi', facadeDirection: 'güney',
+    monthlyDues: 2500, features: ['balkon', 'otopark', 'asansör', 'güvenlik', 'havuz'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 40.9676, lon: 28.8699,
+    notes: 'Site içi yüzme havuzu, spor salonu mevcut.',
+    owner: { name: 'Hasan Demir', phone: '0533 445 5566', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(45), updatedAt: iso(7),
+    title: 'Küçükbakkalköy Yatırımlık 2+1', price: 7500000,
+    squareMeters: 95, roomCount: '2+1', floor: 5, totalFloors: 10,
+    district: 'Ataşehir', neighborhood: 'Küçükbakkalköy',
+    listingType: 'sale', status: 'active',
+    buildingAge: 5, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: false, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'doğu',
+    monthlyDues: 800, features: ['balkon', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: false,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 40.9841, lon: 29.1042,
+    notes: 'Metrobüs hattına yakın. Kira getirisi yüksek.',
+    owner: { name: 'Fatma Çelik', phone: '0544 556 6677', notes: 'Satıştan sonra kiracıyla devam etmek istiyor.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(200), updatedAt: iso(20),
+    title: 'Zekeriyaköy Müstakil Villa 5+2', price: 45000000,
+    squareMeters: 350, roomCount: '5+2', floor: 0, totalFloors: 3,
+    district: 'Sarıyer', neighborhood: 'Zekeriyaköy',
+    listingType: 'sale', status: 'active',
+    buildingAge: 6, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: true, hasElevator: false, isGatedCommunity: true,
+    furnishing: 'unfurnished', facadeDirection: 'güney',
+    monthlyDues: 4500, features: ['balkon', 'otopark', 'bahçe', 'güvenlik', 'havuz'],
+    deedStatus: 'tam_mulkiyet', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1.5,
+    lat: 41.1882, lon: 29.0567,
+    notes: 'Orman içinde sakin konum. Özel bahçe 700m². Geniş garaj.',
+    owner: { name: 'Emre Öztürk', phone: '0535 667 7788', notes: 'Müzakereye açık.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(30), updatedAt: iso(2),
+    title: 'Bağlarbaşı 3+1 Ara Kat Ferah Daire', price: 8200000,
+    squareMeters: 130, roomCount: '3+1', floor: 3, totalFloors: 7,
+    district: 'Maltepe', neighborhood: 'Bağlarbaşı',
+    listingType: 'sale', status: 'active',
+    buildingAge: 20, heatingType: 'kombi',
+    hasBalcony: true, hasParking: false, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'güney',
+    monthlyDues: 600, features: ['balkon', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 40.9257, lon: 29.1356,
+    notes: 'Sakin sokak. Okul ve parka yakın. Komşular çok iyi.',
+    owner: { name: 'Zeynep Şahin', phone: '0546 778 8899', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(150), updatedAt: iso(15),
+    title: 'Cumhuriyet Mah. 2+1 Uygun Fiyatlı', price: 5900000,
+    squareMeters: 88, roomCount: '2+1', floor: 2, totalFloors: 5,
+    district: 'Beylikdüzü', neighborhood: 'Cumhuriyet',
+    listingType: 'sale', status: 'sold',
+    buildingAge: 9, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: true, hasElevator: false, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'kuzey',
+    monthlyDues: 400, features: ['balkon', 'otopark'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 41.0006, lon: 28.6468,
+    notes: 'Metrobüs yakını. İlk eve giren için uygun.',
+    owner: { name: 'Ali Erdoğan', phone: '0537 889 9900', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(75), updatedAt: iso(8),
+    title: 'Çengelköy Boğaz Manzaralı 4+2 Dublex', price: 18500000,
+    squareMeters: 200, roomCount: '4+2', floor: 5, totalFloors: 6,
+    district: 'Üsküdar', neighborhood: 'Çengelköy',
+    listingType: 'sale', status: 'active',
+    buildingAge: 10, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: true, hasElevator: true, isGatedCommunity: true,
+    furnishing: 'furnished', facadeDirection: 'batı',
+    monthlyDues: 3500, features: ['balkon', 'otopark', 'asansör', 'güvenlik'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 41.0516, lon: 29.0647,
+    notes: 'Boğaz manzarası muhteşem. Dubleks. Tam eşyalı.',
+    owner: { name: 'Berna Koç', phone: '0548 990 0011', notes: 'Tapu devri 1 ay içinde.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(20), updatedAt: iso(1),
+    title: 'Kurtköy 1+1 Yatırıma Uygun Daire', price: 3200000,
+    squareMeters: 52, roomCount: '1+1', floor: 7, totalFloors: 14,
+    district: 'Pendik', neighborhood: 'Kurtköy',
+    listingType: 'sale', status: 'active',
+    buildingAge: 3, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: false, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'doğu',
+    monthlyDues: 350, features: ['balkon', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: true, hasDASK: false,
+    zoningStatus: 'konut', commissionRate: 2,
+    lat: 40.9132, lon: 29.2046,
+    notes: 'Havalimanı aksı. Kira potansiyeli yüksek.',
+    owner: { name: 'Caner Polat', phone: '0531 001 1122', notes: '' },
+    meetingHistory: []
+  },
+  // --- KİRALIK (10) ---
+  {
+    id: uuid(), createdAt: iso(50), updatedAt: iso(4),
+    title: 'Fenerbahçe Parkı Karşısı 2+1 Kiralık', price: 35000,
+    squareMeters: 90, roomCount: '2+1', floor: 3, totalFloors: 6,
+    district: 'Kadıköy', neighborhood: 'Fenerbahçe',
+    listingType: 'rent', status: 'active',
+    buildingAge: 18, heatingType: 'kombi',
+    hasBalcony: true, hasParking: false, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'furnished', facadeDirection: 'güney',
+    monthlyDues: 700, features: ['balkon', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 40.9734, lon: 29.0452,
+    notes: 'Park manzarası. Tamamen yenilenmiş eşyalı.',
+    owner: { name: 'Gül Tekin', phone: '0543 112 2233', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(35), updatedAt: iso(6),
+    title: 'Bebek Sahil Hattında 1+1 Lüks Kiralık', price: 45000,
+    squareMeters: 65, roomCount: '1+1', floor: 2, totalFloors: 4,
+    district: 'Beşiktaş', neighborhood: 'Bebek',
+    listingType: 'rent', status: 'active',
+    buildingAge: 25, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: false, hasElevator: false, isGatedCommunity: false,
+    furnishing: 'furnished', facadeDirection: 'batı',
+    monthlyDues: 500, features: ['balkon'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 41.0773, lon: 29.0432,
+    notes: 'Sahil karşısı. Boğaz manzarası. Araçsız ulaşım kolay.',
+    owner: { name: 'Murat Başaran', phone: '0532 223 3344', notes: 'Kiracı kalitesine dikkat ediyor.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(100), updatedAt: iso(25),
+    title: 'Bomonti Modern 2+1 Ofis Yakını', price: 28000,
+    squareMeters: 80, roomCount: '2+1', floor: 8, totalFloors: 15,
+    district: 'Şişli', neighborhood: 'Bomonti',
+    listingType: 'rent', status: 'rented',
+    buildingAge: 4, heatingType: 'merkezi',
+    hasBalcony: true, hasParking: true, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'kuzey',
+    monthlyDues: 1200, features: ['balkon', 'otopark', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 41.0585, lon: 28.9777,
+    notes: 'Merkezi lokasyon. Metro yakını.',
+    owner: { name: 'Dilek Aslan', phone: '0547 334 4455', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(40), updatedAt: iso(9),
+    title: 'Bahçelievler Geniş 3+1 Kiralık', price: 30000,
+    squareMeters: 120, roomCount: '3+1', floor: 1, totalFloors: 5,
+    district: 'Bakırköy', neighborhood: 'Bahçelievler',
+    listingType: 'rent', status: 'active',
+    buildingAge: 22, heatingType: 'kombi',
+    hasBalcony: true, hasParking: false, hasElevator: false, isGatedCommunity: false,
+    furnishing: 'semi', facadeDirection: 'güney',
+    monthlyDues: 400, features: ['balkon'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 40.9972, lon: 28.8596,
+    notes: 'Aile için uygun. Bahçe kullanımı mevcut.',
+    owner: { name: 'Nilüfer Keskin', phone: '0539 445 5566', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(15), updatedAt: iso(2),
+    title: 'Yenisahra Stüdyo Kiralık Yatırımlık', price: 22000,
+    squareMeters: 55, roomCount: '1+1', floor: 10, totalFloors: 16,
+    district: 'Ataşehir', neighborhood: 'Yenisahra',
+    listingType: 'rent', status: 'active',
+    buildingAge: 6, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: false, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'furnished', facadeDirection: 'doğu',
+    monthlyDues: 600, features: ['balkon', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: false,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 40.9875, lon: 29.1213,
+    notes: 'Genç profesyoneller için ideal. Mobilya dahil.',
+    owner: { name: 'Taner Güven', phone: '0534 556 6677', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(55), updatedAt: iso(12),
+    title: 'Büyükdere Cad. Kiralık Ofis 200m²', price: 85000,
+    squareMeters: 200, roomCount: null, floor: 15, totalFloors: 22,
+    district: 'Şişli', neighborhood: 'Büyükdere',
+    listingType: 'rent', status: 'active',
+    buildingAge: 8, heatingType: 'merkezi',
+    hasBalcony: false, hasParking: true, hasElevator: true, isGatedCommunity: true,
+    furnishing: 'unfurnished', facadeDirection: 'batı',
+    monthlyDues: 8000, features: ['otopark', 'asansör', 'güvenlik'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'ticari', commissionRate: 1.5,
+    lat: 41.0783, lon: 29.0114,
+    notes: 'A Sınıfı ofis. Açık plan. Toplantı odaları hazır.',
+    owner: { name: 'Irmak Holdings', phone: '0212 555 7788', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(28), updatedAt: iso(3),
+    title: 'Maslak 2+1 Modern Kiralık Daire', price: 40000,
+    squareMeters: 95, roomCount: '2+1', floor: 18, totalFloors: 24,
+    district: 'Sarıyer', neighborhood: 'Maslak',
+    listingType: 'rent', status: 'active',
+    buildingAge: 3, heatingType: 'merkezi',
+    hasBalcony: true, hasParking: true, hasElevator: true, isGatedCommunity: true,
+    furnishing: 'furnished', facadeDirection: 'kuzey',
+    monthlyDues: 2800, features: ['balkon', 'otopark', 'asansör', 'güvenlik'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 41.1094, lon: 29.0205,
+    notes: 'Finans merkezi yakını. Site lüks.',
+    owner: { name: 'Özgür Demircan', phone: '0541 667 7788', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(130), updatedAt: iso(30),
+    title: 'Kartal Esentepe 3+1 Kiralık Aile Dairesi', price: 25000,
+    squareMeters: 115, roomCount: '3+1', floor: 4, totalFloors: 8,
+    district: 'Kartal', neighborhood: 'Esentepe',
+    listingType: 'rent', status: 'rented',
+    buildingAge: 16, heatingType: 'dogalgaz',
+    hasBalcony: true, hasParking: false, hasElevator: true, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'güney',
+    monthlyDues: 500, features: ['balkon', 'asansör'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 40.9056, lon: 29.1896,
+    notes: 'Geniş odalı, ferah. Okul ve market yakını.',
+    owner: { name: 'Sevim Altın', phone: '0549 778 8899', notes: '' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(22), updatedAt: iso(1),
+    title: 'Cihangir Eski Bina Karakter Daire 1+1', price: 32000,
+    squareMeters: 60, roomCount: '1+1', floor: 2, totalFloors: 5,
+    district: 'Beyoğlu', neighborhood: 'Cihangir',
+    listingType: 'rent', status: 'active',
+    buildingAge: 70, heatingType: 'kombi',
+    hasBalcony: false, hasParking: false, hasElevator: false, isGatedCommunity: false,
+    furnishing: 'furnished', facadeDirection: 'batı',
+    monthlyDues: 0, features: [],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: true,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 41.0329, lon: 28.9740,
+    notes: 'Tarihi bina, restore edilmiş. Bohemian atmosfer.',
+    owner: { name: 'Can Yaman', phone: '0536 889 9900', notes: 'Yabancı kiracı kabul etmiyor.' },
+    meetingHistory: []
+  },
+  {
+    id: uuid(), createdAt: iso(18), updatedAt: iso(2),
+    title: 'Gültepe 2+1 Uygun Kiralık', price: 20000,
+    squareMeters: 85, roomCount: '2+1', floor: 3, totalFloors: 6,
+    district: 'Kağıthane', neighborhood: 'Gültepe',
+    listingType: 'rent', status: 'active',
+    buildingAge: 30, heatingType: 'kombi',
+    hasBalcony: true, hasParking: false, hasElevator: false, isGatedCommunity: false,
+    furnishing: 'unfurnished', facadeDirection: 'kuzey',
+    monthlyDues: 300, features: ['balkon'],
+    deedStatus: 'kat_mulkiyeti', creditEligible: false, hasDASK: false,
+    zoningStatus: 'konut', commissionRate: 1,
+    lat: 41.0789, lon: 28.9611,
+    notes: 'Bütçe dostu seçenek. Ulaşım kolaylığı var.',
+    owner: { name: 'Raziye Kılıç', phone: '0530 990 0011', notes: '' },
+    meetingHistory: []
+  }
+];
+
+// ---- 100 MÜŞTERİ ----
+const SEGMENTS = ['hot','hot','warm','warm','warm','cold','cold','lost'];
+const STAGES  = ['lead','lead','contacted','contacted','offer','contract','closed','lost'];
+const TYPES   = ['buyer','buyer','renter','investor'];
+const PRIOS   = ['high','high','medium','medium','low'];
+const SOURCES = ['referral','portal','social','direct','other'];
+const CREDITS = ['available','pending','not_eligible','not_applied'];
+const DECISIONS = ['looking','ready','decided'];
+const LTYPES  = ['sale','rent','both'];
+const OCCS = ['Mühendis','Doktor','Avukat','Öğretmen','Esnaf','Yönetici','Muhasebeci','Mimar','Akademisyen','Girişimci','Bankacı','Hemşire','Pilot','Gazeteci','Pazarlamacı'];
+const DISTRICTS = ['Kadıköy','Beşiktaş','Şişli','Bakırköy','Ataşehir','Üsküdar','Sarıyer','Maltepe','Beylikdüzü','Pendik','Kartal','Beyoğlu','Kağıthane','Eyüpsultan','Sultanbeyli'];
+const ROOMS = ['1+1','2+1','3+1','4+1'];
+
+const FIRST_NAMES = ['Ahmet','Mehmet','Mustafa','Ali','Hüseyin','Hasan','İbrahim','Murat','Ömer','Yusuf','Emre','Burak','Serkan','Tolga','Kemal','Ayşe','Fatma','Zeynep','Emine','Hatice','Merve','Esra','Selin','Ece','Buse','Derya','Gülşen','Sibel','Nilüfer','Pınar','Ceren','Elif','Tuğba','Büşra','Rabia'];
+const LAST_NAMES  = ['Yılmaz','Kaya','Demir','Şahin','Çelik','Yıldız','Arslan','Öztürk','Koç','Polat','Aydın','Güneş','Yıldırım','Kılıç','Erdoğan','Aslan','Kaplan','Doğan','Keskin','Çetin','Güler','Acar','Şimşek','Özcan','Karakaş','Demirci','Uzun','Kurt','Öz','Bulut'];
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pickN(arr, n) {
+  const copy = [...arr]; const result = [];
+  for (let i = 0; i < n && copy.length; i++) { const idx = Math.floor(Math.random() * copy.length); result.push(...copy.splice(idx, 1)); }
+  return result;
+}
+function rnd(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function phone() { return `05${rnd(30,59)} ${rnd(100,999)} ${rnd(10,99)}${rnd(10,99)}`; }
+function email(fn, ln) { return `${fn.toLowerCase().replace(/[ğüşıöçİĞÜŞÖÇ]/g, c => ({'ğ':'g','ü':'u','ş':'s','ı':'i','ö':'o','ç':'c','İ':'i','Ğ':'g','Ü':'u','Ş':'s','Ö':'o','Ç':'c'}[c]||c))}${ln.toLowerCase().replace(/[ğüşıöçİĞÜŞÖÇ]/g, c => ({'ğ':'g','ü':'u','ş':'s','ı':'i','ö':'o','ç':'c','İ':'i','Ğ':'g','Ü':'u','Ş':'s','Ö':'o','Ç':'c'}[c]||c))}${rnd(1,99)}@${pick(['gmail.com','hotmail.com','yahoo.com','outlook.com'])}`; }
+function bdStr() { return `${rnd(1960,1998)}-${String(rnd(1,12)).padStart(2,'0')}-${String(rnd(1,28)).padStart(2,'0')}`; }
+
+const budgetRanges = [
+  [2000000, 4000000], [4000000, 7000000], [7000000, 12000000],
+  [12000000, 20000000], [20000000, 50000000],
+  [15000, 25000], [25000, 40000], [40000, 80000]
+];
+
+const CLIENTS = Array.from({ length: 100 }, (_, i) => {
+  const fn = pick(FIRST_NAMES);
+  const ln = pick(LAST_NAMES);
+  const brange = pick(budgetRanges);
+  const daysAgo = rnd(1, 365);
+  return {
+    id: uuid(),
+    createdAt: iso(daysAgo),
+    updatedAt: iso(Math.floor(daysAgo / 2)),
+    firstName: fn,
+    lastName: ln,
+    phone: phone(),
+    email: email(fn, ln),
+    notes: i % 5 === 0 ? 'Acil karar verme durumu var. Yakından takip edilmeli.' : (i % 7 === 0 ? 'Kredi onayı bekleniyor.' : ''),
+    occupation: pick(OCCS),
+    birthday: rnd(0, 1) ? bdStr() : null,
+    segment: SEGMENTS[i % SEGMENTS.length],
+    source: SOURCES[i % SOURCES.length],
+    pipelineStage: STAGES[i % STAGES.length],
+    pipelineHistory: [],
+    noteLog: [],
+    budgetMin: brange[0],
+    budgetMax: brange[1],
+    preferredDistricts: pickN(DISTRICTS, rnd(1, 3)),
+    preferredNeighborhoods: [],
+    desiredFeatures: pickN(['balkon','otopark','asansör','güvenlik','havuz'], rnd(0, 3)),
+    desiredRoomCounts: pickN(ROOMS, rnd(1, 2)),
+    desiredMinM2: rnd(50, 100),
+    desiredMaxM2: rnd(100, 250),
+    clientType: TYPES[i % TYPES.length],
+    priorityLevel: PRIOS[i % PRIOS.length],
+    firstMeetingDate: dateStr(daysAgo),
+    declaredIncome: rnd(0, 1) ? rnd(20, 200) * 1000 : null,
+    creditStatus: pick(CREDITS),
+    decisionStage: pick(DECISIONS),
+    listingTypePreference: pick(LTYPES),
+    matchWeights: { budget: 40, location: 30, squareMeters: 15, roomCount: 10, features: 5 },
+    meetingHistory: [],
+    shownPropertyIds: [],
+  };
+});
+
+function loadSeedData() {
+  try {
+    const existingProps = JSON.parse(localStorage.getItem('gm_crm_properties') || '[]');
+    const existingClients = JSON.parse(localStorage.getItem('gm_crm_clients') || '[]');
+
+    const mergedProps = [...PROPERTIES, ...existingProps];
+    const mergedClients = [...CLIENTS, ...existingClients];
+
+    localStorage.setItem('gm_crm_properties', JSON.stringify(mergedProps));
+    localStorage.setItem('gm_crm_clients', JSON.stringify(mergedClients));
+
+    document.getElementById('result').innerHTML =
+      `<div class="result ok">✅ Başarıyla yüklendi!<br>${PROPERTIES.length} portföy + ${CLIENTS.length} müşteri eklendi.<br><br>3 saniye içinde uygulamaya yönlendiriliyorsunuz...</div>`;
+    setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+  } catch(e) {
+    document.getElementById('result').innerHTML = `<div class="result err">❌ Hata: ${e.message}</div>`;
+  }
+}
+
+function clearAll() {
+  if (!confirm('Tüm veriler silinecek. Emin misiniz?')) return;
+  localStorage.removeItem('gm_crm_properties');
+  localStorage.removeItem('gm_crm_clients');
+  localStorage.removeItem('gm_crm_reminders');
+  localStorage.removeItem('gm_crm_activity');
+  document.getElementById('result').innerHTML = `<div class="result ok">🗑️ Tüm veriler silindi.</div>`;
+}
+</script>
+</body>
+</html>
