@@ -1166,6 +1166,102 @@ img { max-width: 100%; }
 /* form-hint link */
 .form-hint a { color: var(--color-primary); font-size: .75rem; }
 
+/* ===== HOLIDAY CLIENT PANEL ===== */
+.holidays-click-hint {
+  font-size: .8rem;
+  color: var(--color-text-muted);
+  margin: -.25rem 0 .75rem;
+}
+.holiday-row-clickable {
+  cursor: pointer;
+  transition: background .15s;
+}
+.holiday-row-clickable:hover { background: var(--color-surface-hover); }
+.holiday-row-clickable:hover .holiday-clients-icon { opacity: 1; }
+.holiday-clients-icon {
+  margin-left: auto;
+  opacity: .35;
+  color: var(--color-text-muted);
+  transition: opacity .15s;
+  display: flex;
+  align-items: center;
+}
+
+/* Side panel */
+.holiday-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1100;
+}
+.holiday-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100dvh;
+  width: min(420px, 100vw);
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  z-index: 1101;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+  box-shadow: -6px 0 32px rgba(0,0,0,.35);
+}
+.holiday-panel-open { transform: translateX(0) !important; }
+.holiday-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.25rem 1rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  gap: .5rem;
+  flex-shrink: 0;
+}
+.holiday-panel-title { font-size: 1rem; font-weight: 600; }
+.holiday-panel-date  { font-size: .8rem; color: var(--color-text-muted); margin-top: .2rem; }
+.holiday-panel-body  { flex: 1; overflow-y: auto; padding: .75rem; display: flex; flex-direction: column; gap: .75rem; }
+
+.hp-group {}
+.hp-group-title {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: .5rem;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.hp-clients-list { display: flex; flex-direction: column; gap: .45rem; }
+.hp-client-card {
+  background: var(--color-surface-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: .65rem .75rem;
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.hp-client-info { flex: 1; min-width: 0; }
+.hp-client-name { font-weight: 600; font-size: .88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hp-client-meta { margin-top: .1rem; display: flex; flex-wrap: wrap; gap: .25rem; align-items: center; }
+.hp-client-actions { display: flex; gap: .4rem; flex-shrink: 0; align-items: center; }
+.hp-wa-btn {
+  background: #25D366;
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  font-size: .78rem;
+  padding: .3rem .6rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.hp-wa-btn:hover { background: #1ebe5a; color: #fff; }
+
 /* WhatsApp float button */
 .whatsapp-float {
   position: fixed;
