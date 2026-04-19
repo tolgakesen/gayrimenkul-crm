@@ -138,49 +138,76 @@ function activityIcon(type) {
 function renderCharts(properties, clients) {
   destroyCharts();
 
-  // Status pie
+  const textColor   = getCssVar('--color-text');
+  const mutedColor  = getCssVar('--color-text-muted');
+  const borderColor = getCssVar('--color-border');
+
+  // 1. Portföy durumu — doughnut (tüm portföyler)
+  const STATUS_KEYS = ['active', 'sold', 'rented', 'withdrawn'];
   const statusCounts = { active: 0, sold: 0, rented: 0, withdrawn: 0 };
   properties.forEach(p => { if (statusCounts[p.status] != null) statusCounts[p.status]++; });
-  const statusLabels = ['Aktif', 'Satıldı', 'Kiralandı', 'Çekildi'];
   const ctx1 = document.getElementById('chart-status');
   if (ctx1 && window.Chart) {
     charts.status = new Chart(ctx1, {
       type: 'doughnut',
       data: {
-        labels: statusLabels,
+        labels: ['Aktif', 'Satıldı', 'Kiralandı', 'Çekildi'],
         datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#3b82f6','#22c55e','#f59e0b','#6b7280'], borderWidth: 0 }]
       },
-      options: { plugins: { legend: { position: 'right', labels: { color: getCssVar('--color-text') } } }, cutout: '60%' }
+      options: {
+        plugins: { legend: { position: 'right', labels: { color: textColor } } },
+        cutout: '60%',
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('dashboard_filter_status', STATUS_KEYS[elements[0].index]);
+          window.location.hash = '#/properties';
+        },
+        onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+      }
     });
   }
 
-  // Price by district bar
+  // 2. İlçe bazlı ort. ₺/m² — SADECE satılık ilanlar (kiralık fiyatlarla karıştırılmamalı)
   const districtMap = {};
-  properties.filter(p => p.district && p.squareMeters && p.price).forEach(p => {
+  properties.filter(p => p.listingType === 'sale' && p.district && p.squareMeters > 0 && p.price > 0).forEach(p => {
     if (!districtMap[p.district]) districtMap[p.district] = [];
     districtMap[p.district].push(p.price / p.squareMeters);
   });
-  const districtLabels = Object.keys(districtMap).slice(0, 8);
-  const districtAvg = districtLabels.map(d => Math.round(districtMap[d].reduce((a, b) => a + b, 0) / districtMap[d].length));
+  const districtEntries = Object.entries(districtMap)
+    .map(([d, vals]) => [d, Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)])
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, 8);
+  const districtLabels = districtEntries.map(([d]) => d);
+  const districtAvg    = districtEntries.map(([,v]) => v);
+
   const ctx2 = document.getElementById('chart-price');
   if (ctx2 && window.Chart) {
     charts.price = new Chart(ctx2, {
       type: 'bar',
       data: {
         labels: districtLabels.length ? districtLabels : ['Veri Yok'],
-        datasets: [{ label: '₺/m²', data: districtAvg.length ? districtAvg : [0], backgroundColor: '#3b82f6', borderRadius: 6 }]
+        datasets: [{ label: 'Ort. ₺/m² (Satılık)', data: districtAvg.length ? districtAvg : [0], backgroundColor: '#3b82f6', borderRadius: 6 }]
       },
       options: {
-        plugins: { legend: { display: false } },
+        plugins: { legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ' ₺' + ctx.parsed.y.toLocaleString('tr-TR') + '/m²' } }
+        },
         scales: {
-          x: { ticks: { color: getCssVar('--color-text-muted') }, grid: { color: getCssVar('--color-border') } },
-          y: { ticks: { color: getCssVar('--color-text-muted') }, grid: { color: getCssVar('--color-border') } }
-        }
+          x: { ticks: { color: mutedColor }, grid: { color: borderColor } },
+          y: { ticks: { color: mutedColor, callback: v => '₺' + (v/1000).toFixed(0)+'K' }, grid: { color: borderColor } }
+        },
+        onClick: (_, elements) => {
+          if (!elements.length || !districtLabels.length) return;
+          sessionStorage.setItem('nav_prop_search', districtLabels[elements[0].index]);
+          window.location.hash = '#/properties';
+        },
+        onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
       }
     });
   }
 
-  // Client stats doughnut
+  // 3. Müşteri tipi dağılımı — pie
+  const TYPE_KEYS = ['buyer', 'seller', 'tenant'];
   const typeCounts = { buyer: 0, seller: 0, tenant: 0 };
   clients.forEach(c => { if (typeCounts[c.clientType] != null) typeCounts[c.clientType]++; });
   const ctx3 = document.getElementById('chart-clients');
@@ -191,7 +218,15 @@ function renderCharts(properties, clients) {
         labels: ['Alıcı', 'Satıcı', 'Kiracı'],
         datasets: [{ data: Object.values(typeCounts), backgroundColor: ['#3b82f6','#22c55e','#f59e0b'], borderWidth: 0 }]
       },
-      options: { plugins: { legend: { position: 'right', labels: { color: getCssVar('--color-text') } } } }
+      options: {
+        plugins: { legend: { position: 'right', labels: { color: textColor } } },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('nav_client_type', TYPE_KEYS[elements[0].index]);
+          window.location.hash = '#/clients';
+        },
+        onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+      }
     });
   }
 }

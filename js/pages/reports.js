@@ -94,52 +94,69 @@ export function renderReports(container) {
 }
 
 function renderCharts(clients, properties) {
-  const tv = () => getComputedStyle(document.documentElement).getPropertyValue;
-  const textColor = getCssVar('--color-text');
-  const mutedColor = getCssVar('--color-text-muted');
+  const now         = new Date();
+  const textColor   = getCssVar('--color-text');
+  const mutedColor  = getCssVar('--color-text-muted');
   const borderColor = getCssVar('--color-border');
+  const legend      = { labels: { color: textColor, font: { family: 'Inter' } } };
+  const hover       = (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; };
 
-  const chartDefaults = {
-    plugins: { legend: { labels: { color: textColor, font: { family: 'Inter' } } } }
-  };
-
-  // 1. Dönüşüm Hunisi
-  const STAGES = ['lead','contacted','offer','contract','closed','lost'];
-  const stageCounts = STAGES.map(s => clients.filter(c => (c.pipelineStage||'lead') === s).length);
+  // 1. Dönüşüm Hunisi (pipeline stage dağılımı — yatay bar)
+  const STAGE_KEYS = ['lead','contacted','offer','contract','closed','lost'];
+  const stageCounts = STAGE_KEYS.map(s => clients.filter(c => (c.pipelineStage||'lead') === s).length);
   const stageBg = ['#6b7280','#0ea5e9','#f59e0b','#3b82f6','#22c55e','#ef4444'];
   const ctx1 = document.getElementById('rpt-funnel');
   if (ctx1 && window.Chart) {
     charts.funnel = new Chart(ctx1, {
       type: 'bar',
       data: {
-        labels: STAGES.map(s => TR.pipeline[s]),
+        labels: STAGE_KEYS.map(s => TR.pipeline[s]),
         datasets: [{ data: stageCounts, backgroundColor: stageBg, borderRadius: 6, borderSkipped: false }]
       },
-      options: { indexAxis:'y', plugins: { legend: { display: false } }, scales: {
-        x: { ticks: { color: mutedColor }, grid: { color: borderColor } },
-        y: { ticks: { color: textColor }, grid: { display: false } }
-      }}
+      options: {
+        indexAxis: 'y',
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: mutedColor }, grid: { color: borderColor } },
+          y: { ticks: { color: textColor }, grid: { display: false } }
+        },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('nav_client_stage', STAGE_KEYS[elements[0].index]);
+          window.location.hash = '#/clients';
+        },
+        onHover: hover
+      }
     });
   }
 
-  // 2. Müşteri Kaynakları
-  const SOURCES = ['referral','portal','social','direct','other'];
-  const srcCounts = SOURCES.map(s => clients.filter(c => (c.source||'other') === s).length);
+  // 2. Müşteri Kaynakları (doughnut)
+  const SOURCE_KEYS = ['referral','portal','social','direct','other'];
+  const srcCounts = SOURCE_KEYS.map(s => clients.filter(c => (c.source||'other') === s).length);
   const ctx2 = document.getElementById('rpt-sources');
   if (ctx2 && window.Chart) {
     charts.sources = new Chart(ctx2, {
       type: 'doughnut',
       data: {
-        labels: SOURCES.map(s => TR.source[s]),
+        labels: SOURCE_KEYS.map(s => TR.source[s]),
         datasets: [{ data: srcCounts, backgroundColor: ['#22c55e','#3b82f6','#f59e0b','#8b5cf6','#6b7280'], borderWidth: 0 }]
       },
-      options: { ...chartDefaults, cutout: '60%' }
+      options: {
+        plugins: { legend },
+        cutout: '60%',
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('nav_client_source', SOURCE_KEYS[elements[0].index]);
+          window.location.hash = '#/clients';
+        },
+        onHover: hover
+      }
     });
   }
 
-  // 3. Segment Dağılımı
-  const SEGS = ['hot','warm','cold','lost'];
-  const segCounts = SEGS.map(s => clients.filter(c => (c.segment||'warm') === s).length);
+  // 3. Segment Dağılımı (pie)
+  const SEG_KEYS = ['hot','warm','cold','lost'];
+  const segCounts = SEG_KEYS.map(s => clients.filter(c => (c.segment||'warm') === s).length);
   const ctx3 = document.getElementById('rpt-segments');
   if (ctx3 && window.Chart) {
     charts.segments = new Chart(ctx3, {
@@ -148,11 +165,20 @@ function renderCharts(clients, properties) {
         labels: ['🔥 Sıcak','🌤 Ilık','❄️ Soğuk','💤 Kayıp'],
         datasets: [{ data: segCounts, backgroundColor: ['#ef4444','#f59e0b','#0ea5e9','#6b7280'], borderWidth: 0 }]
       },
-      options: chartDefaults
+      options: {
+        plugins: { legend },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('nav_client_segment', SEG_KEYS[elements[0].index]);
+          window.location.hash = '#/clients';
+        },
+        onHover: hover
+      }
     });
   }
 
-  // 4. Portföy Yaş Analizi
+  // 4. Portföy Bina Yaşı Analizi (tüm ilanlar)
+  const AGE_KEYS = ['0-5','6-10','11-20','21-30','30+'];
   const ageBuckets = { '0-5':0, '6-10':0, '11-20':0, '21-30':0, '30+':0 };
   properties.forEach(p => {
     const a = p.buildingAge;
@@ -168,26 +194,36 @@ function renderCharts(clients, properties) {
     charts.age = new Chart(ctx4, {
       type: 'bar',
       data: {
-        labels: Object.keys(ageBuckets).map(k => k+' yıl'),
+        labels: AGE_KEYS.map(k => k + ' yıl'),
         datasets: [{ label: 'İlan Sayısı', data: Object.values(ageBuckets), backgroundColor: '#8b5cf6', borderRadius: 6 }]
       },
-      options: { plugins: { legend: { display: false } }, scales: {
-        x: { ticks: { color: mutedColor }, grid: { display: false } },
-        y: { ticks: { color: mutedColor }, grid: { color: borderColor } }
-      }}
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: mutedColor }, grid: { display: false } },
+          y: { ticks: { color: mutedColor }, grid: { color: borderColor }, beginAtZero: true }
+        },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('nav_prop_age', AGE_KEYS[elements[0].index]);
+          window.location.hash = '#/properties';
+        },
+        onHover: hover
+      }
     });
   }
 
-  // 5. Aylık Kapanan Anlaşmalar (son 12 ay)
+  // 5. Aylık Kapanan Anlaşmalar — son 12 ay (pipelineStage=closed, updatedAt baz alınır)
   const MONTHS_TR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  const monthKeys   = [];
   const monthLabels = [];
-  const monthData = [];
+  const monthData   = [];
   for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    monthLabels.push(MONTHS_TR[d.getMonth()] + ' ' + d.getFullYear());
-    const count = clients.filter(c => c.pipelineStage === 'closed' && (c.updatedAt||'').startsWith(key)).length;
-    monthData.push(count);
+    monthKeys.push(key);
+    monthLabels.push(MONTHS_TR[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2));
+    monthData.push(clients.filter(c => c.pipelineStage === 'closed' && (c.updatedAt||'').startsWith(key)).length);
   }
   const ctx5 = document.getElementById('rpt-monthly');
   if (ctx5 && window.Chart) {
@@ -195,17 +231,25 @@ function renderCharts(clients, properties) {
       type: 'bar',
       data: {
         labels: monthLabels,
-        datasets: [{ label: 'Kapanan', data: monthData, backgroundColor: '#3b82f6', borderRadius: 6 }]
+        datasets: [{ label: 'Kapanan Müşteri', data: monthData, backgroundColor: '#3b82f6', borderRadius: 6 }]
       },
-      options: { plugins: { legend: { display: false } }, scales: {
-        x: { ticks: { color: mutedColor, maxRotation: 45 }, grid: { display: false } },
-        y: { ticks: { color: mutedColor }, grid: { color: borderColor }, beginAtZero: true }
-      }}
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: mutedColor, maxRotation: 45 }, grid: { display: false } },
+          y: { ticks: { color: mutedColor }, grid: { color: borderColor }, beginAtZero: true }
+        },
+        onClick: (_, elements) => {
+          if (!elements.length) return;
+          sessionStorage.setItem('nav_client_stage', 'closed');
+          sessionStorage.setItem('nav_client_month', monthKeys[elements[0].index]);
+          window.location.hash = '#/clients';
+        },
+        onHover: hover
+      }
     });
   }
 }
-
-const now = new Date();
 
 function destroyCharts() {
   Object.values(charts).forEach(c => { try { c.destroy(); } catch {} });

@@ -8,13 +8,20 @@ let viewMode = 'grid';
 let searchQ = '';
 let filterStatus = '';
 let filterType = '';
+let filterAge = '';
 let currentProperty = null;
 let currentStep = 0;
+
+const AGE_BUCKET_LABELS = { '0-5':'0-5 yıl', '6-10':'6-10 yıl', '11-20':'11-20 yıl', '21-30':'21-30 yıl', '30+':'30+ yıl' };
 
 export function renderProperties(container) {
   const admin = isAdmin();
   const pendingFilter = sessionStorage.getItem('dashboard_filter_status');
   if (pendingFilter !== null) { filterStatus = pendingFilter; sessionStorage.removeItem('dashboard_filter_status'); }
+  const navSearch = sessionStorage.getItem('nav_prop_search');
+  if (navSearch !== null) { searchQ = navSearch; sessionStorage.removeItem('nav_prop_search'); }
+  const navAge = sessionStorage.getItem('nav_prop_age');
+  if (navAge !== null) { filterAge = navAge; sessionStorage.removeItem('nav_prop_age'); }
   if (!admin && filterStatus !== 'active') filterStatus = 'active';
 
   container.innerHTML = `
@@ -42,6 +49,7 @@ export function renderProperties(container) {
         <button class="btn-icon ${viewMode==='table'?'active':''}" id="btn-table" title="${TR.property.viewTable}"><i data-lucide="list"></i></button>
       </div>
     </div>
+    <div id="prop-active-chips"></div>
     <div id="properties-list"></div>
   `;
 
@@ -62,7 +70,32 @@ export function renderProperties(container) {
 
   document.getElementById('prop-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
 
+  renderPropActiveChips(container);
   renderList();
+}
+
+function renderPropActiveChips(container) {
+  const bar = document.getElementById('prop-active-chips');
+  if (!bar) return;
+  const chips = [];
+  if (filterAge) chips.push({ key:'age', label: 'Bina Yaşı: ' + (AGE_BUCKET_LABELS[filterAge] || filterAge) });
+  if (!chips.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `<div class="active-filter-chips">
+    ${chips.map(c => `<span class="filter-chip" data-clear="${c.key}">${c.label} <button class="filter-chip-clear" data-clear="${c.key}">×</button></span>`).join('')}
+    <button class="btn btn-ghost btn-sm filter-chip-clear-all">Filtreyi Temizle</button>
+  </div>`;
+  bar.querySelectorAll('[data-clear]').forEach(el => {
+    el.addEventListener('click', () => {
+      if (el.dataset.clear === 'age') filterAge = '';
+      renderPropActiveChips(container);
+      renderList();
+    });
+  });
+  bar.querySelector('.filter-chip-clear-all')?.addEventListener('click', () => {
+    filterAge = '';
+    renderPropActiveChips(container);
+    renderList();
+  });
 }
 
 function renderList() {
@@ -74,6 +107,18 @@ function renderList() {
   }
   if (effectiveStatus) data = data.filter(p => p.status === effectiveStatus);
   if (filterType) data = data.filter(p => p.listingType === filterType);
+  if (filterAge) {
+    data = data.filter(p => {
+      const a = p.buildingAge;
+      if (a == null) return false;
+      if (filterAge === '0-5')   return a <= 5;
+      if (filterAge === '6-10')  return a >= 6  && a <= 10;
+      if (filterAge === '11-20') return a >= 11 && a <= 20;
+      if (filterAge === '21-30') return a >= 21 && a <= 30;
+      if (filterAge === '30+')   return a > 30;
+      return true;
+    });
+  }
 
   const list = document.getElementById('properties-list');
   if (!list) return;

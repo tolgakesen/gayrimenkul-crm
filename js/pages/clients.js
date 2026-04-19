@@ -8,9 +8,27 @@ let searchQ = '';
 let filterType = '';
 let filterPriority = '';
 let filterSegment = '';
+let filterStage = '';
+let filterSource = '';
+let filterMonth = '';
 let currentStep = 0;
 
+const STAGE_LABELS = { lead:'Potansiyel', contacted:'İlk Görüşme', offer:'Teklif', contract:'Sözleşme', closed:'Kapandı', lost:'Kaybedildi' };
+const SOURCE_LABELS = { referral:'Referans', portal:'Portal', social:'Sosyal Medya', direct:'Doğrudan', other:'Diğer' };
+
 export function renderClients(container) {
+  // sessionStorage'dan grafik navigasyon filtrelerini al
+  const navType    = sessionStorage.getItem('nav_client_type');
+  const navSegment = sessionStorage.getItem('nav_client_segment');
+  const navStage   = sessionStorage.getItem('nav_client_stage');
+  const navSource  = sessionStorage.getItem('nav_client_source');
+  const navMonth   = sessionStorage.getItem('nav_client_month');
+  if (navType)    { filterType    = navType;    sessionStorage.removeItem('nav_client_type'); }
+  if (navSegment) { filterSegment = navSegment; sessionStorage.removeItem('nav_client_segment'); }
+  if (navStage)   { filterStage   = navStage;   sessionStorage.removeItem('nav_client_stage'); }
+  if (navSource)  { filterSource  = navSource;  sessionStorage.removeItem('nav_client_source'); }
+  if (navMonth)   { filterMonth   = navMonth;   sessionStorage.removeItem('nav_client_month'); }
+
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.client.title}</h1>
@@ -39,6 +57,7 @@ export function renderClients(container) {
         <option value="lost">💤 Kaybedildi</option>
       </select>
     </div>
+    <div id="client-active-chips"></div>
     <div id="clients-list"></div>
   `;
 
@@ -53,7 +72,36 @@ export function renderClients(container) {
   document.getElementById('client-filter-priority').addEventListener('change', e => { filterPriority = e.target.value; renderList(); });
   document.getElementById('client-filter-segment').addEventListener('change', e => { filterSegment = e.target.value; renderList(); });
 
+  renderActiveChips();
   renderList();
+}
+
+function renderActiveChips() {
+  const bar = document.getElementById('client-active-chips');
+  if (!bar) return;
+  const chips = [];
+  if (filterStage)  chips.push({ key:'stage',  label: 'Aşama: ' + (STAGE_LABELS[filterStage]  || filterStage)  });
+  if (filterSource) chips.push({ key:'source', label: 'Kaynak: ' + (SOURCE_LABELS[filterSource] || filterSource) });
+  if (filterMonth)  chips.push({ key:'month',  label: 'Ay: ' + filterMonth });
+  if (!chips.length) { bar.innerHTML = ''; return; }
+  bar.innerHTML = `<div class="active-filter-chips">
+    ${chips.map(c => `<span class="filter-chip" data-clear="${c.key}">${c.label} <button class="filter-chip-clear" data-clear="${c.key}">×</button></span>`).join('')}
+    <button class="btn btn-ghost btn-sm filter-chip-clear-all">Filtreleri Temizle</button>
+  </div>`;
+  bar.querySelectorAll('[data-clear]').forEach(el => {
+    el.addEventListener('click', () => {
+      const k = el.dataset.clear;
+      if (k === 'stage')  filterStage  = '';
+      if (k === 'source') filterSource = '';
+      if (k === 'month')  filterMonth  = '';
+      renderActiveChips();
+      renderList();
+    });
+  });
+  bar.querySelector('.filter-chip-clear-all')?.addEventListener('click', () => {
+    filterStage = ''; filterSource = ''; filterMonth = '';
+    renderActiveChips(); renderList();
+  });
 }
 
 function renderList() {
@@ -62,9 +110,12 @@ function renderList() {
     const q = searchQ.toLowerCase();
     data = data.filter(c => (c.firstName+' '+c.lastName).toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.email||'').toLowerCase().includes(q));
   }
-  if (filterType) data = data.filter(c => c.clientType === filterType);
+  if (filterType)     data = data.filter(c => c.clientType === filterType);
   if (filterPriority) data = data.filter(c => c.priorityLevel === filterPriority);
-  if (filterSegment) data = data.filter(c => c.segment === filterSegment);
+  if (filterSegment)  data = data.filter(c => c.segment === filterSegment);
+  if (filterStage)    data = data.filter(c => (c.pipelineStage || 'lead') === filterStage);
+  if (filterSource)   data = data.filter(c => (c.source || 'other') === filterSource);
+  if (filterMonth)    data = data.filter(c => (c.updatedAt || '').startsWith(filterMonth));
 
   const list = document.getElementById('clients-list');
   if (!list) return;
