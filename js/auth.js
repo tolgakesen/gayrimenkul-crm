@@ -2,6 +2,14 @@ const USERS_KEY = 'gm_crm_users';
 const SESSION_KEY = 'gm_crm_session';
 const SALT = 'gm_crm_v1_salt_x9k';
 
+const GUEST_SESSION = {
+  userId: 'guest',
+  username: 'guest',
+  fullName: 'Misafir',
+  role: 'guest',
+  permissions: {},
+};
+
 async function hashPassword(password) {
   const encoder = new TextEncoder();
   const data = encoder.encode(password + SALT);
@@ -37,6 +45,14 @@ export function clearSession() {
   sessionStorage.removeItem(SESSION_KEY);
 }
 
+export function startGuestSession() {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(GUEST_SESSION));
+}
+
+export function isGuest() {
+  return getSession()?.role === 'guest';
+}
+
 export function isLoggedIn() {
   return !!getSession();
 }
@@ -53,7 +69,14 @@ export function hasPermission(module, action) {
   const s = getSession();
   if (!s) return false;
   if (s.role === 'admin') return true;
+  if (s.role === 'guest') return action === 'view';
   return s.permissions?.[module]?.[action] === true;
+}
+
+export function cleanupNonAdminUsers() {
+  const users = getUsers();
+  const adminOnly = users.filter(u => u.username.toLowerCase() === 'admin');
+  if (adminOnly.length < users.length) saveUsers(adminOnly);
 }
 
 export async function login(username, password) {

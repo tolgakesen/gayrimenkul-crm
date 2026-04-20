@@ -1,5 +1,5 @@
 import { TR } from '../i18n.js';
-import { getCurrentUser, isAdmin } from '../auth.js';
+import { getCurrentUser, isAdmin, isGuest } from '../auth.js';
 
 const ROUTES = [
   { hash: '#/', icon: 'layout-dashboard', label: TR.nav.dashboard },
@@ -45,7 +45,14 @@ export function renderSidebar() {
         <i data-lucide="sun-moon"></i>
         <span>Tema</span>
       </button>
-      ${session ? `
+      ${isGuest() ? `
+      <div class="sidebar-user sidebar-user-guest">
+        <div class="sidebar-user-avatar" style="background:var(--color-text-muted);font-size:0.85rem">M</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">Misafir</div>
+          <div class="sidebar-user-role">Görüntüleme Modu</div>
+        </div>
+      </div>` : session ? `
       <div class="sidebar-user">
         <div class="sidebar-user-avatar">${(session.fullName||'?').charAt(0).toUpperCase()}</div>
         <div class="sidebar-user-info">

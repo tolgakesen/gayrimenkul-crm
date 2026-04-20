@@ -1,10 +1,10 @@
 import { renderSidebar, updateSidebarActive } from './components/sidebar.js';
 import { getSettings, saveSettings, getAll } from './storage.js';
 import { checkReminders } from './pages/reminders.js';
-import { isLoggedIn, logout, isAdmin } from './auth.js';
+import { isLoggedIn, isGuest, isAdmin, logout, startGuestSession, cleanupNonAdminUsers } from './auth.js';
 
 async function loadPage(hash) {
-  if (!isLoggedIn()) { showLogin(); return; }
+  if (!isLoggedIn()) { startGuestSession(); }
 
   const main = document.getElementById('main-content');
   if (!main) return;
@@ -92,25 +92,27 @@ function initNotifications() {
   }
 }
 
-function showLogin() {
-  document.getElementById('app-shell').style.display = 'none';
-  const ls = document.getElementById('login-screen');
-  ls.style.display = 'flex';
+async function showAdminLoginModal() {
+  const { createModal, openModal, closeModal } = await import('./components/modals.js');
+  const { renderLogin } = await import('./pages/login.js');
 
-  import('./pages/login.js').then(({ renderLogin }) => {
-    renderLogin(document.getElementById('login-content'), () => {
-      ls.style.display = 'none';
-      document.getElementById('app-shell').style.display = '';
-      renderSidebar();
-      attachSidebarEvents();
-      const target = location.hash && location.hash !== '#/login' ? location.hash : '#/';
-      if (location.hash === target) {
-        loadPage(target);
-      } else {
-        location.hash = target;
-      }
-    });
+  const modal = createModal('admin-login-modal', 'Yönetici Girişi',
+    '<div id="admin-login-content"></div>');
+  openModal('admin-login-modal');
+
+  renderLogin(document.getElementById('admin-login-content'), () => {
+    closeModal('admin-login-modal');
+    renderSidebar();
+    attachSidebarEvents();
+    updateAdminBtn();
+    loadPage(location.hash);
   });
+}
+
+function updateAdminBtn() {
+  const btn = document.getElementById('btn-admin-login');
+  if (!btn) return;
+  btn.style.display = isGuest() ? '' : 'none';
 }
 
 function attachSidebarEvents() {
@@ -118,8 +120,12 @@ function attachSidebarEvents() {
     const logoutBtn = e.target.closest('#btn-logout');
     if (logoutBtn) {
       logout();
-      document.getElementById('app-shell').style.display = 'none';
-      showLogin();
+      startGuestSession();
+      renderSidebar();
+      attachSidebarEvents();
+      updateAdminBtn();
+      loadPage(location.hash);
+      return;
     }
 
     const overlay = document.getElementById('sidebar-overlay');
@@ -136,6 +142,9 @@ function initApp() {
   initNotifications();
 
   document.addEventListener('click', e => {
+    const adminLoginBtn = e.target.closest('#btn-admin-login');
+    if (adminLoginBtn) { showAdminLoginModal(); return; }
+
     const toggle = e.target.closest('#theme-toggle');
     if (toggle) {
       const settings = getSettings();
@@ -160,17 +169,18 @@ function initApp() {
 
   window.addEventListener('hashchange', () => loadPage(location.hash));
 
-  if (isLoggedIn()) {
-    document.getElementById('app-shell').style.display = '';
-    document.getElementById('login-screen').style.display = 'none';
-    renderSidebar();
-    attachSidebarEvents();
-    loadPage(location.hash);
-    setInterval(checkReminders, 60000);
-    setInterval(updateNotificationBadge, 30000);
-  } else {
-    showLogin();
-  }
+  cleanupNonAdminUsers();
+
+  if (!isLoggedIn()) startGuestSession();
+
+  document.getElementById('app-shell').style.display = '';
+  document.getElementById('login-screen').style.display = 'none';
+  renderSidebar();
+  attachSidebarEvents();
+  updateAdminBtn();
+  loadPage(location.hash);
+  setInterval(checkReminders, 60000);
+  setInterval(updateNotificationBadge, 30000);
 }
 
 initApp();

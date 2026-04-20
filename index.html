@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <link rel="stylesheet" href="css/main.css?v=20260426">
+  <link rel="stylesheet" href="css/main.css?v=20260420b">
 </head>
 <body>
   <!-- Login Screen -->
@@ -53,6 +53,10 @@
           <i data-lucide="bell"></i>
           <span id="notif-badge" style="display:none">0</span>
         </a>
+        <button id="btn-admin-login" class="topbar-admin-btn" title="Yönetici girişi yap">
+          <i data-lucide="shield-check"></i>
+          <span>Admin Girişi</span>
+        </button>
       </header>
       <main id="main-wrapper">
         <div id="main-content">
@@ -70,7 +74,7 @@
     </svg>
   </a>
 
-  <script type="module" src="js/app.js?v=20260426"></script>
+  <script type="module" src="js/app.js?v=20260420b"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) window.lucide.createIcons();

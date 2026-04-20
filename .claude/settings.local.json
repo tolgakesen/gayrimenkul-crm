@@ -3,7 +3,16 @@
     "allow": [
       "Bash(git -C /c/claude/gun2 add .)",
       "Bash(git -C /c/claude/gun2 commit -m \"Remove unnecessary GitHub Actions workflow \\(Pages serves directly from branch\\)\")",
-      "Bash(git -C /c/claude/gun2 push)"
+      "Bash(git -C /c/claude/gun2 push)",
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('URL:', d.get\\('html_url'\\), '\\\\nDurum:', d.get\\('status'\\)\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git -C /c/claude/gun2 add js/pages/dashboard.js js/pages/properties.js js/pages/reminders.js css/main.css)",
+      "Bash(git -C /c/claude/gun2 commit -m \"feat: stat cards navigate to relevant pages with filter on dashboard\")",
+      "Bash(node *)",
+      "Bash(powershell.exe *)"
     ]
   }
 }
