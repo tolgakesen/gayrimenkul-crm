@@ -2,7 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
 import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile, exportToExcel } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
-import { hasPermission, isAdmin } from '../auth.js';
+import { hasPermission, isAdmin, isOwnOnly, hasFieldPermission, getCurrentUser } from '../auth.js';
 
 let viewMode = 'grid';
 let searchQ = '';
@@ -119,6 +119,10 @@ function renderPropActiveChips(container) {
 
 function renderList() {
   let data = getAll('properties');
+  if (isOwnOnly('properties')) {
+    const uid = getCurrentUser()?.userId;
+    data = data.filter(p => p.createdBy === uid);
+  }
   const effectiveStatus = isAdmin() ? filterStatus : 'active';
   if (searchQ) {
     const q = searchQ.toLowerCase();
@@ -177,7 +181,7 @@ function propertyCard(p) {
       </div>
       <div class="property-card-body">
         <h4 class="property-title">${truncate(p.title, 35)}</h4>
-        <div class="property-price">${formatPrice(p.price)}</div>
+        ${hasFieldPermission('properties','price') ? `<div class="property-price">${formatPrice(p.price)}</div>` : ''}
         <div class="property-meta">
           <span><i data-lucide="map-pin"></i> ${p.district||'—'}${p.neighborhood ? ', '+p.neighborhood : ''}</span>
           <span><i data-lucide="maximize-2"></i> ${p.squareMeters||'—'} m²</span>
@@ -195,16 +199,17 @@ function propertyCard(p) {
 }
 
 function propertyTable(data) {
+  const showPrice = hasFieldPermission('properties', 'price');
   return `
     <div class="table-wrapper">
       <table class="table">
         <thead><tr>
-          <th>Başlık</th><th>Fiyat</th><th>m²</th><th>Oda</th><th>İlçe</th><th>Tip</th><th>Durum</th><th>${TR.common.actions}</th>
+          <th>Başlık</th>${showPrice ? '<th>Fiyat</th>' : ''}<th>m²</th><th>Oda</th><th>İlçe</th><th>Tip</th><th>Durum</th><th>${TR.common.actions}</th>
         </tr></thead>
         <tbody>
           ${data.map(p => `<tr>
             <td>${truncate(p.title,30)}</td>
-            <td>${formatPrice(p.price)}</td>
+            ${showPrice ? `<td>${formatPrice(p.price)}</td>` : ''}
             <td>${p.squareMeters||'—'}</td>
             <td>${p.roomCount||'—'}</td>
             <td>${p.district||'—'}</td>
@@ -443,9 +448,11 @@ function saveProperty(modal, photoData, editId) {
 
   const features = [...form.querySelectorAll('input[name="features"]:checked')].map(i => i.value);
 
+  const existing = editId ? getAll('properties').find(p=>p.id===editId) : null;
   const data = {
     id: editId || uuid(),
-    createdAt: editId ? (getAll('properties').find(p=>p.id===editId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    createdBy: existing?.createdBy || getCurrentUser()?.userId || null,
     updatedAt: new Date().toISOString(),
     title, price,
     squareMeters: parseFloat(get('squareMeters')) || null,
@@ -476,7 +483,7 @@ function saveProperty(modal, photoData, editId) {
     lat: parseFloat(get('lat')) || null,
     lon: parseFloat(get('lon')) || null,
     owner: { name: get('ownerName')?.trim(), phone: get('ownerPhone')?.trim(), notes: get('ownerNotes') },
-    meetingHistory: editId ? (getAll('properties').find(p=>p.id===editId)?.meetingHistory||[]) : [],
+    meetingHistory: existing?.meetingHistory || [],
   };
 
   let properties = getAll('properties');
@@ -519,7 +526,7 @@ export function openPropertyDetail(id) {
           ${p.floorPlanPhoto ? `<img src="${p.floorPlanPhoto}" class="detail-photo" alt="Kat Planı">` : ''}
           <div class="detail-grid">
             ${dRow('Başlık', p.title)}
-            ${dRow('Fiyat', formatPrice(p.price))}
+            ${hasFieldPermission('properties','price') ? dRow('Fiyat', formatPrice(p.price)) : ''}
             ${dRow('m²', p.squareMeters ? p.squareMeters + ' m²' : '—')}
             ${dRow('Oda', p.roomCount||'—')}
             ${dRow('Kat', p.floor ? p.floor+'/'+p.totalFloors : '—')}
@@ -531,7 +538,7 @@ export function openPropertyDetail(id) {
             ${dRow('Aidat', formatPrice(p.monthlyDues))}
           </div>
           <div class="feature-tags">${(p.features||[]).map(f => `<span class="tag">${FEATURE_OPTIONS.find(o=>o.value===f)?.label||f}</span>`).join('')}</div>
-          ${p.notes ? `<div class="notes-box"><strong>Not:</strong> ${p.notes}</div>` : ''}
+          ${hasFieldPermission('properties','notes') && p.notes ? `<div class="notes-box"><strong>Not:</strong> ${p.notes}</div>` : ''}
         </div>
         <div class="tab-panel" id="tab-advanced">
           <div class="detail-grid">
@@ -543,12 +550,13 @@ export function openPropertyDetail(id) {
             ${dRow('Cephe', p.facadeDirection||'—')}
             ${dRow('Eşya', p.furnishing||'—')}
           </div>
+          ${hasFieldPermission('properties','ownerInfo') ? `
           <h4 style="margin:1rem 0 .5rem">Mal Sahibi</h4>
           <div class="detail-grid">
             ${dRow('Ad', p.owner?.name||'—')}
             ${dRow('Telefon', p.owner?.phone||'—')}
             ${p.owner?.notes ? dRow('Not', p.owner.notes) : ''}
-          </div>
+          </div>` : ''}
         </div>
         <div class="tab-panel" id="tab-matches">
           ${matches.length ? matches.map(m => `

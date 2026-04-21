@@ -913,6 +913,10 @@ img { max-width: 100%; }
 .perm-actions { display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; }
 .perm-check { display: flex; align-items: center; gap: .35rem; cursor: pointer; font-size: .82rem; user-select: none; }
 .perm-check input[type=checkbox] { accent-color: var(--color-primary); width: 14px; height: 14px; }
+.perm-own-only { margin-top: .45rem; padding-top: .4rem; border-top: 1px dashed var(--color-border); }
+.perm-check-ownonly { color: var(--color-primary); font-style: italic; }
+.perm-fields { margin-top: .45rem; padding-top: .4rem; border-top: 1px dashed var(--color-border); }
+.perm-fields-label { font-size: .75rem; color: var(--color-text-muted); margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .04em; }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {

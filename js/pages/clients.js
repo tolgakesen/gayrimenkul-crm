@@ -2,7 +2,7 @@ import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
 import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile, exportToExcel } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
-import { hasPermission, isAdmin } from '../auth.js';
+import { hasPermission, isAdmin, isOwnOnly, hasFieldPermission, getCurrentUser } from '../auth.js';
 
 let searchQ = '';
 let filterType = '';
@@ -135,6 +135,10 @@ function renderActiveChips() {
 
 function renderList() {
   let data = getAll('clients');
+  if (isOwnOnly('clients')) {
+    const uid = getCurrentUser()?.userId;
+    data = data.filter(c => c.createdBy === uid);
+  }
   if (searchQ) {
     const q = searchQ.toLowerCase();
     data = data.filter(c => (c.firstName+' '+c.lastName).toLowerCase().includes(q) || (c.phone||'').includes(q) || (c.email||'').toLowerCase().includes(q));
@@ -156,16 +160,22 @@ function renderList() {
     return;
   }
 
+  const showPhone  = hasFieldPermission('clients', 'phone');
+  const showBudget = hasFieldPermission('clients', 'budget');
   list.innerHTML = `<div class="table-wrapper"><table class="table"><thead><tr>
     <th class="col-check"><input type="checkbox" id="select-all-clients" title="Tümünü Seç"></th>
-    <th>Ad Soyad</th><th>Telefon</th><th>Tip</th><th>Bütçe</th><th>Öncelik</th><th>Segment</th><th>Aşama</th><th>${TR.common.actions}</th>
+    <th>Ad Soyad</th>
+    ${showPhone ? '<th>Telefon</th>' : ''}
+    <th>Tip</th>
+    ${showBudget ? '<th>Bütçe</th>' : ''}
+    <th>Öncelik</th><th>Segment</th><th>Aşama</th><th>${TR.common.actions}</th>
   </tr></thead><tbody>
     ${data.map(c => `<tr>
       <td class="col-check"><input type="checkbox" class="client-checkbox" data-id="${c.id}"></td>
       <td><strong>${c.firstName} ${c.lastName}</strong></td>
-      <td>${c.phone||'—'}</td>
+      ${showPhone ? `<td>${c.phone||'—'}</td>` : ''}
       <td><span class="badge badge-outline">${typeLabel(c.clientType)}</span></td>
-      <td>${c.budgetMin||c.budgetMax ? (c.budgetMin?formatPrice(c.budgetMin):'')+'–'+(c.budgetMax?formatPrice(c.budgetMax):'') : '—'}</td>
+      ${showBudget ? `<td>${c.budgetMin||c.budgetMax ? (c.budgetMin?formatPrice(c.budgetMin):'')+'–'+(c.budgetMax?formatPrice(c.budgetMax):'') : '—'}</td>` : ''}
       <td>${priorityBadge(c.priorityLevel)}</td>
       <td>${segmentBadge(c.segment)}</td>
       <td>${pipelineStageBadge(c.pipelineStage)}</td>
@@ -448,9 +458,11 @@ function saveClient(modal, editId) {
   const weights = {};
   form.querySelectorAll('.weight-slider').forEach(s => { weights[s.name.replace('w_', '')] = parseInt(s.value); });
 
+  const existing = editId ? getAll('clients').find(c=>c.id===editId) : null;
   const data = {
     id: editId || uuid(),
-    createdAt: editId ? (getAll('clients').find(c=>c.id===editId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    createdBy: existing?.createdBy || getCurrentUser()?.userId || null,
     updatedAt: new Date().toISOString(),
     firstName, lastName: get('lastName')?.trim()||'',
     phone: get('phone')?.trim(),
@@ -461,8 +473,8 @@ function saveClient(modal, editId) {
     segment: get('segment') || 'warm',
     source: get('source') || 'other',
     pipelineStage: get('pipelineStage') || 'lead',
-    pipelineHistory: editId ? (getAll('clients').find(c=>c.id===editId)?.pipelineHistory||[]) : [],
-    noteLog: editId ? (getAll('clients').find(c=>c.id===editId)?.noteLog||[]) : [],
+    pipelineHistory: existing?.pipelineHistory || [],
+    noteLog: existing?.noteLog || [],
     budgetMin: parseFloat(get('budgetMin')) || null,
     budgetMax: parseFloat(get('budgetMax')) || null,
     preferredDistricts, preferredNeighborhoods,
@@ -477,8 +489,8 @@ function saveClient(modal, editId) {
     decisionStage: get('decisionStage'),
     listingTypePreference: get('listingTypePreference'),
     matchWeights: weights,
-    meetingHistory: editId ? (getAll('clients').find(c=>c.id===editId)?.meetingHistory||[]) : [],
-    shownPropertyIds: editId ? (getAll('clients').find(c=>c.id===editId)?.shownPropertyIds||[]) : [],
+    meetingHistory: existing?.meetingHistory || [],
+    shownPropertyIds: existing?.shownPropertyIds || [],
   };
 
   let clients = getAll('clients');
@@ -522,25 +534,25 @@ export function openClientDetail(id) {
         <div class="tab-panel active" id="tab-profile">
           <div class="detail-grid">
             ${dRow('Ad Soyad', client.firstName+' '+client.lastName)}
-            ${dRow('Telefon', client.phone||'—')}
-            ${dRow('E-posta', client.email||'—')}
+            ${hasFieldPermission('clients','phone') ? dRow('Telefon', client.phone||'—') : ''}
+            ${hasFieldPermission('clients','email') ? dRow('E-posta', client.email||'—') : ''}
             ${dRow('Müşteri Tipi', typeLabel(client.clientType))}
             ${dRow('Öncelik', client.priorityLevel)}
             ${dRow('Karar Aşaması', stageLabel(client.decisionStage))}
             ${dRow('İlk Görüşme', formatDate(client.firstMeetingDate))}
             ${dRow('Kredi Durumu', client.creditStatus||'—')}
-            ${dRow('Beyan Gelir', client.declaredIncome ? formatPrice(client.declaredIncome)+'/ay' : '—')}
+            ${hasFieldPermission('clients','budget') ? dRow('Beyan Gelir', client.declaredIncome ? formatPrice(client.declaredIncome)+'/ay' : '—') : ''}
             ${dRow('Meslek', client.occupation||'—')}
             ${dRow('Doğum Günü', formatDate(client.birthday))}
             ${dRow('Segment', segmentBadge(client.segment))}
             ${dRow('Kaynak', sourceLabel(client.source))}
             ${dRow('Satış Aşaması', pipelineStageBadge(client.pipelineStage))}
           </div>
-          ${client.notes ? `<div class="notes-box"><strong>Not:</strong> ${client.notes}</div>` : ''}
+          ${hasFieldPermission('clients','notes') && client.notes ? `<div class="notes-box"><strong>Not:</strong> ${client.notes}</div>` : ''}
         </div>
         <div class="tab-panel" id="tab-criteria">
           <div class="detail-grid">
-            ${dRow('Bütçe', [client.budgetMin?formatPrice(client.budgetMin):'', client.budgetMax?formatPrice(client.budgetMax):''].filter(Boolean).join(' – ') || '—')}
+            ${hasFieldPermission('clients','budget') ? dRow('Bütçe', [client.budgetMin?formatPrice(client.budgetMin):'', client.budgetMax?formatPrice(client.budgetMax):''].filter(Boolean).join(' – ') || '—') : ''}
             ${dRow('m²', [client.desiredMinM2, client.desiredMaxM2].filter(Boolean).join(' – ') || '—')}
             ${dRow('Oda Sayısı', (client.desiredRoomCounts||[]).join(', ')||'—')}
             ${dRow('Tercih Edilen İlçe', (client.preferredDistricts||[]).join(', ')||'—')}

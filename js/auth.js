@@ -73,6 +73,21 @@ export function hasPermission(module, action) {
   return s.permissions?.[module]?.[action] === true;
 }
 
+export function isOwnOnly(module) {
+  const s = getSession();
+  if (!s || s.role === 'admin' || s.role === 'guest') return false;
+  return s.permissions?.[module]?.ownOnly === true;
+}
+
+export function hasFieldPermission(module, field) {
+  const s = getSession();
+  if (!s) return false;
+  if (s.role === 'admin' || s.role === 'guest') return true;
+  const fields = s.permissions?.[module]?.fields;
+  if (!fields) return true;
+  return fields[field] !== false;
+}
+
 export function cleanupNonAdminUsers() {
   const users = getUsers();
   const adminOnly = users.filter(u => u.username.toLowerCase() === 'admin');
@@ -162,8 +177,8 @@ export function deleteUser(id) {
 
 export function defaultPermissions() {
   return {
-    properties: { view: true, add: true, edit: true, delete: false },
-    clients: { view: true, add: true, edit: true, delete: false },
+    properties: { view: true, add: true, edit: true, delete: false, ownOnly: false, fields: { price: true, ownerInfo: true, notes: true } },
+    clients: { view: true, add: true, edit: true, delete: false, ownOnly: false, fields: { phone: true, email: true, budget: true, notes: true } },
     reminders: { view: true, add: true, edit: true, delete: false },
     matching: { view: true },
     pipeline: { view: true },
@@ -175,8 +190,18 @@ export function defaultPermissions() {
 }
 
 export const PERMISSION_LABELS = {
-  properties: { label: 'İlanlar', actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' } },
-  clients: { label: 'Müşteriler', actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' } },
+  properties: {
+    label: 'İlanlar',
+    actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' },
+    hasOwnOnly: true,
+    fields: { price: 'Fiyat', ownerInfo: 'Mal Sahibi Bilgileri', notes: 'Notlar' },
+  },
+  clients: {
+    label: 'Müşteriler',
+    actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' },
+    hasOwnOnly: true,
+    fields: { phone: 'Telefon', email: 'E-posta', budget: 'Bütçe', notes: 'Notlar' },
+  },
   reminders: { label: 'Hatırlatıcılar', actions: { view: 'Görüntüle', add: 'Ekle', edit: 'Düzenle', delete: 'Sil' } },
   matching: { label: 'Eşleştirme', actions: { view: 'Görüntüle' } },
   pipeline: { label: 'Satış Hunisi', actions: { view: 'Görüntüle' } },

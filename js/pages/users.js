@@ -81,7 +81,7 @@ export function renderUsers(container) {
 }
 
 function permissionGrid(permissions) {
-  return Object.entries(PERMISSION_LABELS).map(([mod, { label, actions }]) => `
+  return Object.entries(PERMISSION_LABELS).map(([mod, { label, actions, hasOwnOnly, fields }]) => `
     <div class="perm-module">
       <div class="perm-module-label">${label}</div>
       <div class="perm-actions">
@@ -92,17 +92,45 @@ function permissionGrid(permissions) {
           </label>
         `).join('')}
       </div>
+      ${hasOwnOnly ? `
+      <div class="perm-own-only">
+        <label class="perm-check perm-check-ownonly">
+          <input type="checkbox" name="perm_${mod}_ownOnly" ${permissions?.[mod]?.ownOnly ? 'checked' : ''}>
+          <span><i data-lucide="user-check" style="width:12px;height:12px;vertical-align:-1px"></i> Sadece kendi kayıtları</span>
+        </label>
+      </div>` : ''}
+      ${fields ? `
+      <div class="perm-fields">
+        <div class="perm-fields-label">Alan erişimi:</div>
+        <div class="perm-actions">
+          ${Object.entries(fields).map(([f, fLabel]) => `
+            <label class="perm-check">
+              <input type="checkbox" name="perm_${mod}_field_${f}" ${permissions?.[mod]?.fields?.[f] !== false ? 'checked' : ''}>
+              <span>${fLabel}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>` : ''}
     </div>
   `).join('');
 }
 
 function collectPermissions(form) {
   const permissions = {};
-  Object.entries(PERMISSION_LABELS).forEach(([mod, { actions }]) => {
+  Object.entries(PERMISSION_LABELS).forEach(([mod, { actions, hasOwnOnly, fields }]) => {
     permissions[mod] = {};
     Object.keys(actions).forEach(act => {
       permissions[mod][act] = !!(form.querySelector(`[name="perm_${mod}_${act}"]`)?.checked);
     });
+    if (hasOwnOnly) {
+      permissions[mod].ownOnly = !!(form.querySelector(`[name="perm_${mod}_ownOnly"]`)?.checked);
+    }
+    if (fields) {
+      permissions[mod].fields = {};
+      Object.keys(fields).forEach(f => {
+        permissions[mod].fields[f] = !!(form.querySelector(`[name="perm_${mod}_field_${f}"]`)?.checked);
+      });
+    }
   });
   return permissions;
 }
