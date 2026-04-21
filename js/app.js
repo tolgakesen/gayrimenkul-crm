@@ -1,7 +1,7 @@
 import { renderSidebar, updateSidebarActive } from './components/sidebar.js';
 import { getSettings, saveSettings, getAll } from './storage.js';
 import { checkReminders } from './pages/reminders.js';
-import { isLoggedIn, isGuest, isAdmin, logout, startGuestSession, cleanupNonAdminUsers } from './auth.js';
+import { isLoggedIn, isGuest, isAdmin, logout, startGuestSession } from './auth.js';
 
 async function loadPage(hash) {
   if (!isLoggedIn()) { startGuestSession(); }
@@ -96,7 +96,7 @@ async function showAdminLoginModal() {
   const { createModal, openModal, closeModal } = await import('./components/modals.js');
   const { renderLogin } = await import('./pages/login.js');
 
-  const modal = createModal('admin-login-modal', 'Yönetici Girişi',
+  const modal = createModal('admin-login-modal', 'Kullanıcı Girişi',
     '<div id="admin-login-content"></div>');
   openModal('admin-login-modal');
 
@@ -168,8 +168,6 @@ function initApp() {
   });
 
   window.addEventListener('hashchange', () => loadPage(location.hash));
-
-  cleanupNonAdminUsers();
 
   if (!isLoggedIn()) startGuestSession();
 
