@@ -167,18 +167,40 @@ function renderCharts(properties, clients) {
     });
   }
 
-  // 2. İlçe bazlı ort. ₺/m² — SADECE satılık ilanlar (kiralık fiyatlarla karıştırılmamalı)
-  const districtMap = {};
-  properties.filter(p => p.listingType === 'sale' && p.district && p.squareMeters > 0 && p.price > 0).forEach(p => {
-    if (!districtMap[p.district]) districtMap[p.district] = [];
-    districtMap[p.district].push(p.price / p.squareMeters);
+  // 2. İlçe bazlı ort. ₺/m² — satılık ve kiralık ayrı ayrı, m² yoksa ortalama fiyat göster
+  const saleMap = {};
+  const rentMap = {};
+  properties.filter(p => p.district && p.price > 0).forEach(p => {
+    const map = p.listingType === 'rent' ? rentMap : saleMap;
+    if (!map[p.district]) map[p.district] = { pricePerM2: [], price: [] };
+    const sqm = Number(p.squareMeters);
+    if (sqm > 0) map[p.district].pricePerM2.push(p.price / sqm);
+    map[p.district].price.push(p.price);
   });
-  const districtEntries = Object.entries(districtMap)
-    .map(([d, vals]) => [d, Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)])
-    .sort((a,b) => b[1] - a[1])
-    .slice(0, 8);
+
+  const avg = arr => arr.length ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : null;
+  const districtSet = new Set([...Object.keys(saleMap), ...Object.keys(rentMap)]);
+  const districtEntries = [...districtSet].map(d => {
+    const sVals = saleMap[d]?.pricePerM2.length ? saleMap[d].pricePerM2 : saleMap[d]?.price || [];
+    const sortVal = avg(sVals) ?? avg(rentMap[d]?.pricePerM2 || rentMap[d]?.price || []) ?? 0;
+    return [d, sortVal];
+  }).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
   const districtLabels = districtEntries.map(([d]) => d);
-  const districtAvg    = districtEntries.map(([,v]) => v);
+  const saleData = districtLabels.map(d => {
+    const vals = saleMap[d];
+    return vals ? (avg(vals.pricePerM2) ?? avg(vals.price)) : null;
+  });
+  const rentData = districtLabels.map(d => {
+    const vals = rentMap[d];
+    return vals ? (avg(vals.pricePerM2) ?? avg(vals.price)) : null;
+  });
+
+  const hasSale = saleData.some(v => v !== null);
+  const hasRent = rentData.some(v => v !== null);
+  const datasets = [];
+  if (hasSale) datasets.push({ label: 'Satılık ₺/m²', data: saleData, backgroundColor: '#3b82f6', borderRadius: 4 });
+  if (hasRent) datasets.push({ label: 'Kiralık ₺/m²', data: rentData, backgroundColor: '#22c55e', borderRadius: 4 });
 
   const ctx2 = document.getElementById('chart-price');
   if (ctx2 && window.Chart) {
@@ -186,23 +208,24 @@ function renderCharts(properties, clients) {
       type: 'bar',
       data: {
         labels: districtLabels.length ? districtLabels : ['Veri Yok'],
-        datasets: [{ label: 'Ort. ₺/m² (Satılık)', data: districtAvg.length ? districtAvg : [0], backgroundColor: '#3b82f6', borderRadius: 6 }]
+        datasets: datasets.length ? datasets : [{ label: 'Veri Yok', data: [0], backgroundColor: '#6b7280', borderRadius: 4 }],
       },
       options: {
-        plugins: { legend: { display: false },
-          tooltip: { callbacks: { label: ctx => ' ₺' + ctx.parsed.y.toLocaleString('tr-TR') + '/m²' } }
+        plugins: {
+          legend: { display: datasets.length > 1, labels: { color: textColor, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => ' ₺' + (ctx.parsed.y ?? 0).toLocaleString('tr-TR') + '/m²' } },
         },
         scales: {
           x: { ticks: { color: mutedColor }, grid: { color: borderColor } },
-          y: { ticks: { color: mutedColor, callback: v => '₺' + (v/1000).toFixed(0)+'K' }, grid: { color: borderColor } }
+          y: { ticks: { color: mutedColor, callback: v => '₺' + (v / 1000).toFixed(0) + 'K' }, grid: { color: borderColor } },
         },
         onClick: (_, elements) => {
           if (!elements.length || !districtLabels.length) return;
           sessionStorage.setItem('nav_prop_search', districtLabels[elements[0].index]);
           window.location.hash = '#/properties';
         },
-        onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
-      }
+        onHover: (e, elements) => { e.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+      },
     });
   }
 
