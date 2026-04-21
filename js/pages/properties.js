@@ -1,6 +1,6 @@
 import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
-import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile } from '../utils.js';
+import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile, exportToExcel } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
 import { hasPermission, isAdmin } from '../auth.js';
 
@@ -11,6 +11,7 @@ let filterType = '';
 let filterAge = '';
 let currentProperty = null;
 let currentStep = 0;
+let lastFilteredProperties = [];
 
 const AGE_BUCKET_LABELS = { '0-5':'0-5 yıl', '6-10':'6-10 yıl', '11-20':'11-20 yıl', '21-30':'21-30 yıl', '30+':'30+ yıl' };
 
@@ -28,6 +29,7 @@ export function renderProperties(container) {
     <div class="page-header">
       <h1 class="page-title">${TR.property.title}</h1>
       <div class="page-header-actions">
+        ${isAdmin() ? `<button class="btn btn-outline" id="btn-export-props"><i data-lucide="download"></i> Excel'e Aktar</button>` : ''}
         ${hasPermission('properties','add') ? `<button class="btn btn-outline" id="btn-import-props"><i data-lucide="upload"></i> Excel'den Aktar</button>` : ''}
         ${hasPermission('properties','add') ? `<button class="btn btn-primary" id="btn-add-property"><i data-lucide="plus"></i> ${TR.property.add}</button>` : ''}
       </div>
@@ -78,6 +80,7 @@ export function renderProperties(container) {
 
   document.getElementById('btn-add-property')?.addEventListener('click', () => openPropertyForm(null));
   document.getElementById('btn-import-props')?.addEventListener('click', () => openPropertyImportModal());
+  document.getElementById('btn-export-props')?.addEventListener('click', () => exportProperties());
   document.getElementById('btn-grid').addEventListener('click', () => { viewMode = 'grid'; renderProperties(container); });
   document.getElementById('btn-table').addEventListener('click', () => { viewMode = 'table'; renderProperties(container); });
 
@@ -136,6 +139,7 @@ function renderList() {
     });
   }
 
+  lastFilteredProperties = data;
   const list = document.getElementById('properties-list');
   if (!list) return;
 
@@ -600,6 +604,24 @@ function dRow(label, value) {
 function meetingRow(m) {
   const typeMap = { phone: 'Telefon', in_person: 'Yüz Yüze', online: 'Online', viewing: 'Gezi' };
   return `<div class="meeting-item"><div class="meeting-type">${typeMap[m.type]||m.type}</div><div class="meeting-date">${formatDate(m.date)}</div><div class="meeting-notes">${m.notes||''}</div></div>`;
+}
+
+function exportProperties() {
+  const TYPE_L   = { sale:'Satılık', rent:'Kiralık' };
+  const STATUS_L = { active:'Aktif', sold:'Satıldı', rented:'Kiralandı', withdrawn:'Çekildi' };
+  const rows = lastFilteredProperties.map(p => ({
+    'Başlık': p.title, 'Fiyat': p.price,
+    'm²': p.squareMeters || '', 'Oda': p.roomCount || '',
+    'İlçe': p.district || '', 'Mahalle': p.neighborhood || '',
+    'Kat': p.floor || '', 'Toplam Kat': p.totalFloors || '',
+    'Bina Yaşı': p.buildingAge || '',
+    'Tip': TYPE_L[p.listingType] || p.listingType || '',
+    'Durum': STATUS_L[p.status] || p.status || '',
+    'Komisyon (%)': p.commissionRate || '', 'Aidat': p.monthlyDues || '',
+    'Mal Sahibi': p.owner?.name || '', 'Mal Sahibi Tel': p.owner?.phone || '',
+    'Notlar': p.notes || '',
+  }));
+  exportToExcel(rows, 'portfoy.xlsx');
 }
 
 function openPropertyImportModal() {

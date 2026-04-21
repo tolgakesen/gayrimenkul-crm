@@ -92,6 +92,18 @@ export const FEATURE_OPTIONS = [
   { value: 'deniz', label: 'Deniz Manzarası' },
 ];
 
+export function exportToExcel(rows, filename) {
+  if (!rows.length) { showToast('Dışa aktarılacak veri yok', 'error'); return; }
+  if (window.XLSX) {
+    const ws = window.XLSX.utils.json_to_sheet(rows);
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'Veri');
+    window.XLSX.writeFile(wb, filename);
+  } else {
+    downloadCSV(rows, filename.replace('.xlsx', '.csv'));
+  }
+}
+
 export async function parseImportFile(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   if (ext === 'csv') {

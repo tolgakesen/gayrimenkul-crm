@@ -1,8 +1,8 @@
 import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
-import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile } from '../utils.js';
+import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile, exportToExcel } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
-import { hasPermission } from '../auth.js';
+import { hasPermission, isAdmin } from '../auth.js';
 
 let searchQ = '';
 let filterType = '';
@@ -13,6 +13,7 @@ let filterSource = '';
 let filterMonth = '';
 let currentStep = 0;
 let selectedClientIds = new Set();
+let lastFilteredClients = [];
 
 const WA_TEMPLATES = [
   { id: 'greeting',     label: 'Genel Selamlama',    text: 'Merhaba {ad}, nasılsınız? Gayrimenkul konularında yardımcı olabileceğim bir şey var mı?' },
@@ -43,6 +44,7 @@ export function renderClients(container) {
     <div class="page-header">
       <h1 class="page-title">${TR.client.title}</h1>
       <div class="page-header-actions">
+        ${isAdmin() ? `<button class="btn btn-outline" id="btn-export-clients"><i data-lucide="download"></i> Excel'e Aktar</button>` : ''}
         ${hasPermission('clients','add') ? `<button class="btn btn-outline" id="btn-import-clients"><i data-lucide="upload"></i> Excel'den Aktar</button>` : ''}
         ${hasPermission('clients','add') ? `<button class="btn btn-primary" id="btn-add-client"><i data-lucide="user-plus"></i> ${TR.client.add}</button>` : ''}
       </div>
@@ -93,6 +95,7 @@ export function renderClients(container) {
 
   document.getElementById('btn-add-client')?.addEventListener('click', () => openClientForm(null));
   document.getElementById('btn-import-clients')?.addEventListener('click', () => openClientImportModal());
+  document.getElementById('btn-export-clients')?.addEventListener('click', () => exportClients());
   document.getElementById('client-search').addEventListener('input', debounce(e => { searchQ = e.target.value; renderList(); }, 250));
   document.getElementById('client-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
   document.getElementById('client-filter-priority').addEventListener('change', e => { filterPriority = e.target.value; renderList(); });
@@ -143,6 +146,7 @@ function renderList() {
   if (filterSource)   data = data.filter(c => (c.source || 'other') === filterSource);
   if (filterMonth)    data = data.filter(c => (c.updatedAt || '').startsWith(filterMonth));
 
+  lastFilteredClients = data;
   const list = document.getElementById('clients-list');
   if (!list) return;
 
@@ -633,6 +637,28 @@ function dRow(label, value) {
 function meetingRow(m) {
   const typeMap = { phone: 'Telefon', in_person: 'Yüz Yüze', online: 'Online', viewing: 'Gezi' };
   return `<div class="meeting-item"><div class="meeting-type">${typeMap[m.type]||m.type}</div><div class="meeting-date">${formatDate(m.date)}</div><div class="meeting-notes">${m.notes||''}</div></div>`;
+}
+
+function exportClients() {
+  const TYPE_L   = { buyer:'Alıcı', seller:'Satıcı', tenant:'Kiracı' };
+  const PRI_L    = { low:'Düşük', medium:'Orta', high:'Yüksek', urgent:'Acil' };
+  const SEG_L    = { hot:'Sıcak', warm:'Ilık', cold:'Soğuk', lost:'Kayıp' };
+  const STAGE_L  = { lead:'Potansiyel', contacted:'İlk Görüşme', offer:'Teklif', contract:'Sözleşme', closed:'Kapandı', lost:'Kaybedildi' };
+  const SOURCE_L = { referral:'Referans', portal:'Portal', social:'Sosyal Medya', direct:'Direkt', other:'Diğer' };
+  const rows = lastFilteredClients.map(c => ({
+    'Ad': c.firstName, 'Soyad': c.lastName,
+    'Telefon': c.phone || '', 'E-posta': c.email || '',
+    'Müşteri Tipi': TYPE_L[c.clientType] || c.clientType || '',
+    'Öncelik': PRI_L[c.priorityLevel] || c.priorityLevel || '',
+    'Segment': SEG_L[c.segment] || c.segment || '',
+    'Satış Aşaması': STAGE_L[c.pipelineStage] || c.pipelineStage || '',
+    'Kaynak': SOURCE_L[c.source] || c.source || '',
+    'Bütçe Min': c.budgetMin || '', 'Bütçe Max': c.budgetMax || '',
+    'Tercih İlçe': (c.preferredDistricts||[]).join(', '),
+    'Meslek': c.occupation || '', 'Doğum Günü': c.birthday || '',
+    'İlk Görüşme': c.firstMeetingDate || '', 'Notlar': c.notes || '',
+  }));
+  exportToExcel(rows, 'musteriler.xlsx');
 }
 
 function toIntlPhone(phone) {
