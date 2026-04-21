@@ -1,6 +1,6 @@
 import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
-import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce } from '../utils.js';
+import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
 import { hasPermission, isAdmin } from '../auth.js';
 
@@ -27,26 +27,41 @@ export function renderProperties(container) {
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.property.title}</h1>
-      ${hasPermission('properties','add') ? `<button class="btn btn-primary" id="btn-add-property"><i data-lucide="plus"></i> ${TR.property.add}</button>` : ''}
+      <div class="page-header-actions">
+        ${hasPermission('properties','add') ? `<button class="btn btn-outline" id="btn-import-props"><i data-lucide="upload"></i> Excel'den Aktar</button>` : ''}
+        ${hasPermission('properties','add') ? `<button class="btn btn-primary" id="btn-add-property"><i data-lucide="plus"></i> ${TR.property.add}</button>` : ''}
+      </div>
     </div>
     <div class="toolbar">
-      <input type="text" class="search-input" id="prop-search" placeholder="${TR.property.searchPlaceholder}" value="${searchQ}">
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">Ara</span>
+        <input type="text" class="search-input" id="prop-search" placeholder="${TR.property.searchPlaceholder}" value="${searchQ}">
+      </div>
       ${admin ? `
-      <select class="select-input" id="prop-filter-status">
-        <option value="">${TR.property.filterAll}</option>
-        <option value="active">${TR.property.active}</option>
-        <option value="sold">${TR.property.sold}</option>
-        <option value="rented">${TR.property.rented}</option>
-        <option value="withdrawn">${TR.property.withdrawn}</option>
-      </select>` : ''}
-      <select class="select-input" id="prop-filter-type">
-        <option value="">${TR.property.filterAll}</option>
-        <option value="sale">${TR.property.sale}</option>
-        <option value="rent">${TR.property.rent}</option>
-      </select>
-      <div class="view-toggle">
-        <button class="btn-icon ${viewMode==='grid'?'active':''}" id="btn-grid" title="${TR.property.viewGrid}"><i data-lucide="layout-grid"></i></button>
-        <button class="btn-icon ${viewMode==='table'?'active':''}" id="btn-table" title="${TR.property.viewTable}"><i data-lucide="list"></i></button>
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">Durum</span>
+        <select class="select-input" id="prop-filter-status">
+          <option value="">${TR.property.filterAll}</option>
+          <option value="active">${TR.property.active}</option>
+          <option value="sold">${TR.property.sold}</option>
+          <option value="rented">${TR.property.rented}</option>
+          <option value="withdrawn">${TR.property.withdrawn}</option>
+        </select>
+      </div>` : ''}
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">İlan Tipi</span>
+        <select class="select-input" id="prop-filter-type">
+          <option value="">${TR.property.filterAll}</option>
+          <option value="sale">${TR.property.sale}</option>
+          <option value="rent">${TR.property.rent}</option>
+        </select>
+      </div>
+      <div class="toolbar-item toolbar-item-view">
+        <span class="toolbar-item-label">Görünüm</span>
+        <div class="view-toggle">
+          <button class="btn-icon ${viewMode==='grid'?'active':''}" id="btn-grid" title="${TR.property.viewGrid}"><i data-lucide="layout-grid"></i></button>
+          <button class="btn-icon ${viewMode==='table'?'active':''}" id="btn-table" title="${TR.property.viewTable}"><i data-lucide="list"></i></button>
+        </div>
       </div>
     </div>
     <div id="prop-active-chips"></div>
@@ -62,6 +77,7 @@ export function renderProperties(container) {
   document.getElementById('prop-filter-type').value = filterType;
 
   document.getElementById('btn-add-property')?.addEventListener('click', () => openPropertyForm(null));
+  document.getElementById('btn-import-props')?.addEventListener('click', () => openPropertyImportModal());
   document.getElementById('btn-grid').addEventListener('click', () => { viewMode = 'grid'; renderProperties(container); });
   document.getElementById('btn-table').addEventListener('click', () => { viewMode = 'table'; renderProperties(container); });
 
@@ -584,6 +600,83 @@ function dRow(label, value) {
 function meetingRow(m) {
   const typeMap = { phone: 'Telefon', in_person: 'Yüz Yüze', online: 'Online', viewing: 'Gezi' };
   return `<div class="meeting-item"><div class="meeting-type">${typeMap[m.type]||m.type}</div><div class="meeting-date">${formatDate(m.date)}</div><div class="meeting-notes">${m.notes||''}</div></div>`;
+}
+
+function openPropertyImportModal() {
+  const TEMPLATE = 'Başlık,Fiyat,m²,Oda,İlçe,Mahalle,Kat,Toplam Kat,Bina Yaşı,Tip,Durum,Notlar\nKadıköy 3+1 Satılık,5000000,120,3+1,Kadıköy,Moda,3,5,10,satılık,aktif,\nBeşiktaş 2+1 Kiralık,25000,80,2+1,Beşiktaş,Levent,4,8,5,kiralık,aktif,\n';
+  const body = `
+    <div class="import-guide">
+      <p>Şablonu indirip doldurun. Excel (.xlsx) veya CSV desteklenir.</p>
+      <button class="btn btn-sm btn-outline" id="btn-dl-tpl"><i data-lucide="download"></i> Şablonu İndir</button>
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <label>Dosya Seçin (.xlsx veya .csv)</label>
+      <input type="file" id="import-file" accept=".xlsx,.xls,.csv" class="file-input">
+    </div>
+    <div id="import-preview" style="margin-top:.75rem"></div>
+    <div id="import-error" class="alert alert-danger" style="display:none;margin-top:.5rem"></div>
+  `;
+  const footer = `<button class="btn btn-primary" id="btn-do-import" disabled><i data-lucide="upload"></i> İçeri Aktar</button>`;
+  const modal = createModal('import-modal', 'Portföy İçe Aktarma (Excel/CSV)', body, footer);
+  openModal('import-modal');
+  if (window.lucide) window.lucide.createIcons();
+
+  let parsedRows = [];
+  modal.querySelector('#btn-dl-tpl').addEventListener('click', () => {
+    const blob = new Blob(['\uFEFF' + TEMPLATE], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = 'portfoy-sablonu.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+  modal.querySelector('#import-file').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const errEl = modal.querySelector('#import-error');
+    const preview = modal.querySelector('#import-preview');
+    const importBtn = modal.querySelector('#btn-do-import');
+    errEl.style.display = 'none'; preview.innerHTML = '';
+    try {
+      parsedRows = await parseImportFile(file);
+      if (!parsedRows.length) { errEl.textContent = 'Dosyada veri bulunamadı'; errEl.style.display = ''; return; }
+      const cols = Object.keys(parsedRows[0]);
+      preview.innerHTML = `<p class="import-preview-info">${parsedRows.length} kayıt bulundu (ilk 5 satır önizleme):</p>
+        <div class="table-wrapper" style="max-height:160px;overflow:auto">
+          <table class="table table-sm"><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+          <tbody>${parsedRows.slice(0,5).map(r => `<tr>${cols.map(c => `<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        </div>`;
+      importBtn.disabled = false; importBtn.textContent = `İçeri Aktar (${parsedRows.length} ilan)`;
+    } catch(err) { errEl.textContent = 'Dosya okunamadı: ' + err.message; errEl.style.display = ''; }
+  });
+  modal.querySelector('#btn-do-import').addEventListener('click', () => {
+    importPropertiesData(parsedRows); closeModal('import-modal');
+  });
+}
+
+function importPropertiesData(rows) {
+  const TYPE_MAP = { satılık:'sale', sale:'sale', kiralık:'rent', rent:'rent' };
+  const STATUS_MAP = { aktif:'active', active:'active', satıldı:'sold', sold:'sold', kiralandı:'rented', rented:'rented', çekildi:'withdrawn', withdrawn:'withdrawn' };
+  const existing = getAll('properties');
+  const imported = rows.map(r => ({
+    id: uuid(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    title: r['Başlık'] || r['title'] || '',
+    price: parseFloat(r['Fiyat'] || r['price'] || 0) || 0,
+    squareMeters: parseFloat(r['m²'] || r['squareMeters'] || '') || null,
+    roomCount: r['Oda'] || r['roomCount'] || null,
+    district: r['İlçe'] || r['district'] || '',
+    neighborhood: r['Mahalle'] || r['neighborhood'] || '',
+    floor: parseInt(r['Kat'] || r['floor'] || '') || null,
+    totalFloors: parseInt(r['Toplam Kat'] || r['totalFloors'] || '') || null,
+    buildingAge: parseInt(r['Bina Yaşı'] || r['buildingAge'] || '') || null,
+    listingType: TYPE_MAP[(r['Tip'] || r['listingType'] || '').toLowerCase()] || 'sale',
+    status: STATUS_MAP[(r['Durum'] || r['status'] || '').toLowerCase()] || 'active',
+    notes: r['Notlar'] || r['notes'] || '',
+    features: [], meetingHistory: [],
+    owner: { name: '', phone: '', notes: '' },
+  })).filter(p => p.title && p.price);
+  saveAll('properties', [...imported, ...existing]);
+  logActivity('property_add', `Excel'den ${imported.length} ilan aktarıldı`);
+  showToast(`${imported.length} ilan aktarıldı`);
+  renderList();
 }
 
 function addMeeting(entityType, entityId, listContainerId) {

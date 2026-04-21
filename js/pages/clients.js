@@ -1,6 +1,6 @@
 import { TR } from '../i18n.js';
 import { getAll, saveAll, logActivity } from '../storage.js';
-import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce } from '../utils.js';
+import { uuid, formatPrice, formatDate, truncate, showToast, confirm, ROOM_OPTIONS, FEATURE_OPTIONS, debounce, parseImportFile } from '../utils.js';
 import { createModal, openModal, closeModal, showStep, buildStepIndicator } from '../components/modals.js';
 import { hasPermission } from '../auth.js';
 
@@ -12,6 +12,16 @@ let filterStage = '';
 let filterSource = '';
 let filterMonth = '';
 let currentStep = 0;
+let selectedClientIds = new Set();
+
+const WA_TEMPLATES = [
+  { id: 'greeting',     label: 'Genel Selamlama',    text: 'Merhaba {ad}, nasılsınız? Gayrimenkul konularında yardımcı olabileceğim bir şey var mı?' },
+  { id: 'new_listing',  label: 'Yeni İlan Bildirimi', text: 'Merhaba {ad}, kriterlerinize uygun yeni bir ilan mevcut. Detayları paylaşmak ister misiniz?' },
+  { id: 'meeting',      label: 'Görüşme Hatırlatma',  text: 'Merhaba {ad}, görüşmemizi hatırlatmak istedim. Uygun bir zaman belirleyebilir miyiz?' },
+  { id: 'offer_follow', label: 'Teklif Takibi',       text: 'Merhaba {ad}, teklifimize dair düşüncelerinizi merak ettim. Sizi arayabilir miyim?' },
+  { id: 'birthday',     label: 'Doğum Günü Tebriği',  text: 'Sayın {ad}, doğum gününüzü en içten dileklerimle kutlarım! 🎂' },
+  { id: 'custom',       label: 'Özel Mesaj',          text: '' },
+];
 
 const STAGE_LABELS = { lead:'Potansiyel', contacted:'İlk Görüşme', offer:'Teklif', contract:'Sözleşme', closed:'Kapandı', lost:'Kaybedildi' };
 const SOURCE_LABELS = { referral:'Referans', portal:'Portal', social:'Sosyal Medya', direct:'Doğrudan', other:'Diğer' };
@@ -32,30 +42,45 @@ export function renderClients(container) {
   container.innerHTML = `
     <div class="page-header">
       <h1 class="page-title">${TR.client.title}</h1>
-      ${hasPermission('clients','add') ? `<button class="btn btn-primary" id="btn-add-client"><i data-lucide="user-plus"></i> ${TR.client.add}</button>` : ''}
+      <div class="page-header-actions">
+        ${hasPermission('clients','add') ? `<button class="btn btn-outline" id="btn-import-clients"><i data-lucide="upload"></i> Excel'den Aktar</button>` : ''}
+        ${hasPermission('clients','add') ? `<button class="btn btn-primary" id="btn-add-client"><i data-lucide="user-plus"></i> ${TR.client.add}</button>` : ''}
+      </div>
     </div>
     <div class="toolbar">
-      <input type="text" class="search-input" id="client-search" placeholder="${TR.client.searchPlaceholder}" value="${searchQ}">
-      <select class="select-input" id="client-filter-type">
-        <option value="">${TR.common.all}</option>
-        <option value="buyer">${TR.client.buyer}</option>
-        <option value="seller">${TR.client.seller}</option>
-        <option value="tenant">${TR.client.tenant}</option>
-      </select>
-      <select class="select-input" id="client-filter-priority">
-        <option value="">${TR.common.all}</option>
-        <option value="urgent">${TR.client.urgent}</option>
-        <option value="high">${TR.client.high}</option>
-        <option value="medium">${TR.client.medium}</option>
-        <option value="low">${TR.client.low}</option>
-      </select>
-      <select class="select-input" id="client-filter-segment">
-        <option value="">${TR.common.all} Segment</option>
-        <option value="hot">🔥 Sıcak</option>
-        <option value="warm">🌤 Ilık</option>
-        <option value="cold">❄️ Soğuk</option>
-        <option value="lost">💤 Kaybedildi</option>
-      </select>
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">Ara</span>
+        <input type="text" class="search-input" id="client-search" placeholder="${TR.client.searchPlaceholder}" value="${searchQ}">
+      </div>
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">Müşteri Tipi</span>
+        <select class="select-input" id="client-filter-type">
+          <option value="">${TR.common.all}</option>
+          <option value="buyer">${TR.client.buyer}</option>
+          <option value="seller">${TR.client.seller}</option>
+          <option value="tenant">${TR.client.tenant}</option>
+        </select>
+      </div>
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">Öncelik</span>
+        <select class="select-input" id="client-filter-priority">
+          <option value="">${TR.common.all}</option>
+          <option value="urgent">${TR.client.urgent}</option>
+          <option value="high">${TR.client.high}</option>
+          <option value="medium">${TR.client.medium}</option>
+          <option value="low">${TR.client.low}</option>
+        </select>
+      </div>
+      <div class="toolbar-item">
+        <span class="toolbar-item-label">Segment</span>
+        <select class="select-input" id="client-filter-segment">
+          <option value="">${TR.common.all}</option>
+          <option value="hot">🔥 Sıcak</option>
+          <option value="warm">🌤 Ilık</option>
+          <option value="cold">❄️ Soğuk</option>
+          <option value="lost">💤 Kaybedildi</option>
+        </select>
+      </div>
     </div>
     <div id="client-active-chips"></div>
     <div id="clients-list"></div>
@@ -67,6 +92,7 @@ export function renderClients(container) {
   document.getElementById('client-filter-segment').value = filterSegment;
 
   document.getElementById('btn-add-client')?.addEventListener('click', () => openClientForm(null));
+  document.getElementById('btn-import-clients')?.addEventListener('click', () => openClientImportModal());
   document.getElementById('client-search').addEventListener('input', debounce(e => { searchQ = e.target.value; renderList(); }, 250));
   document.getElementById('client-filter-type').addEventListener('change', e => { filterType = e.target.value; renderList(); });
   document.getElementById('client-filter-priority').addEventListener('change', e => { filterPriority = e.target.value; renderList(); });
@@ -127,9 +153,11 @@ function renderList() {
   }
 
   list.innerHTML = `<div class="table-wrapper"><table class="table"><thead><tr>
+    <th class="col-check"><input type="checkbox" id="select-all-clients" title="Tümünü Seç"></th>
     <th>Ad Soyad</th><th>Telefon</th><th>Tip</th><th>Bütçe</th><th>Öncelik</th><th>Segment</th><th>Aşama</th><th>${TR.common.actions}</th>
   </tr></thead><tbody>
     ${data.map(c => `<tr>
+      <td class="col-check"><input type="checkbox" class="client-checkbox" data-id="${c.id}"></td>
       <td><strong>${c.firstName} ${c.lastName}</strong></td>
       <td>${c.phone||'—'}</td>
       <td><span class="badge badge-outline">${typeLabel(c.clientType)}</span></td>
@@ -152,6 +180,27 @@ function renderList() {
     if (c) openClientForm(c);
   }));
   document.querySelectorAll('.btn-delete').forEach(btn => btn.addEventListener('click', () => deleteClient(btn.dataset.id)));
+
+  // Checkbox setup
+  const selectAllCb = list.querySelector('#select-all-clients');
+  const rowCbs = [...list.querySelectorAll('.client-checkbox')];
+  rowCbs.forEach(cb => { cb.checked = selectedClientIds.has(cb.dataset.id); });
+  const syncSelectAll = () => {
+    const checked = rowCbs.filter(cb => cb.checked).length;
+    if (!selectAllCb) return;
+    selectAllCb.checked = checked === rowCbs.length && rowCbs.length > 0;
+    selectAllCb.indeterminate = checked > 0 && checked < rowCbs.length;
+  };
+  syncSelectAll();
+  selectAllCb?.addEventListener('change', e => {
+    rowCbs.forEach(cb => { cb.checked = e.target.checked; if (e.target.checked) selectedClientIds.add(cb.dataset.id); else selectedClientIds.delete(cb.dataset.id); });
+    updateBulkBar();
+  });
+  rowCbs.forEach(cb => cb.addEventListener('change', () => {
+    if (cb.checked) selectedClientIds.add(cb.dataset.id); else selectedClientIds.delete(cb.dataset.id);
+    syncSelectAll(); updateBulkBar();
+  }));
+  updateBulkBar();
 }
 
 const typeLabel = t => ({ buyer: TR.client.buyer, seller: TR.client.seller, tenant: TR.client.tenant }[t] || t);
@@ -584,6 +633,183 @@ function dRow(label, value) {
 function meetingRow(m) {
   const typeMap = { phone: 'Telefon', in_person: 'Yüz Yüze', online: 'Online', viewing: 'Gezi' };
   return `<div class="meeting-item"><div class="meeting-type">${typeMap[m.type]||m.type}</div><div class="meeting-date">${formatDate(m.date)}</div><div class="meeting-notes">${m.notes||''}</div></div>`;
+}
+
+function toIntlPhone(phone) {
+  const c = (phone || '').replace(/\D/g, '');
+  if (!c) return '';
+  if (c.startsWith('90') && c.length >= 12) return c;
+  if (c.startsWith('0')) return '90' + c.slice(1);
+  return '90' + c;
+}
+
+function updateBulkBar() {
+  let bar = document.getElementById('bulk-wa-bar');
+  if (selectedClientIds.size === 0) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'bulk-wa-bar';
+    bar.className = 'bulk-wa-bar';
+    document.getElementById('main-wrapper')?.appendChild(bar);
+  }
+  bar.innerHTML = `
+    <span class="bulk-wa-count"><strong>${selectedClientIds.size}</strong> müşteri seçildi</span>
+    <button class="btn btn-sm btn-ghost" id="btn-clear-sel">Seçimi Temizle</button>
+    <button class="btn btn-sm btn-wa-green" id="btn-open-bulk-wa"><i data-lucide="message-circle"></i>&ensp;Toplu WhatsApp</button>
+  `;
+  if (window.lucide) window.lucide.createIcons();
+  bar.querySelector('#btn-clear-sel').addEventListener('click', () => {
+    selectedClientIds.clear();
+    document.querySelectorAll('.client-checkbox').forEach(cb => { cb.checked = false; });
+    const sa = document.getElementById('select-all-clients');
+    if (sa) { sa.checked = false; sa.indeterminate = false; }
+    updateBulkBar();
+  });
+  bar.querySelector('#btn-open-bulk-wa').addEventListener('click', openBulkWAModal);
+}
+
+function openBulkWAModal() {
+  const clients = getAll('clients');
+  const selected = [...selectedClientIds].map(id => clients.find(c => c.id === id)).filter(Boolean);
+  if (!selected.length) { showToast('Seçili müşteri yok', 'error'); return; }
+
+  const buildLinks = (msg) => selected.map(c => {
+    const phone = toIntlPhone(c.phone);
+    const personal = msg.replace(/\{ad\}/g, c.firstName);
+    return { c, phone, href: phone ? `https://wa.me/${phone}?text=${encodeURIComponent(personal)}` : '' };
+  });
+
+  const body = `
+    <div class="form-group">
+      <label>Mesaj Şablonu</label>
+      <select id="wa-tpl" class="select-input">
+        ${WA_TEMPLATES.map(t => `<option value="${t.id}">${t.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Mesaj <span class="form-hint">({ad} yerine müşteri adı gelir)</span></label>
+      <textarea id="wa-msg" rows="3" class="textarea-input">${WA_TEMPLATES[0].text}</textarea>
+    </div>
+    <div class="form-group">
+      <label>Seçili Müşteriler (${selected.length})</label>
+      <div class="wa-client-list" id="wa-client-list">
+        ${selected.map(c => `
+          <div class="wa-client-item" data-id="${c.id}">
+            <div class="wa-client-info">
+              <div class="wa-client-name">${c.firstName} ${c.lastName}</div>
+              <div class="wa-client-phone">${c.phone || 'Telefon yok'}</div>
+            </div>
+            ${c.phone ? `<a href="#" class="btn-wa-send wa-ind-link" data-phone="${toIntlPhone(c.phone)}" data-name="${c.firstName}" target="_blank">Gönder</a>` : '<span class="text-muted" style="font-size:.75rem">Telefon yok</span>'}
+          </div>`).join('')}
+      </div>
+    </div>
+  `;
+  const footer = `<button class="btn btn-wa-green" id="btn-send-all"><i data-lucide="send"></i>&ensp;Tümünü Gönder</button>`;
+  const modal = createModal('bulk-wa-modal', 'Toplu WhatsApp Mesajı', body, footer);
+  openModal('bulk-wa-modal');
+  if (window.lucide) window.lucide.createIcons();
+
+  const updateLinks = () => {
+    const msg = modal.querySelector('#wa-msg').value;
+    modal.querySelectorAll('.wa-ind-link').forEach(a => {
+      const personal = msg.replace(/\{ad\}/g, a.dataset.name);
+      a.href = `https://wa.me/${a.dataset.phone}?text=${encodeURIComponent(personal)}`;
+      a.setAttribute('target', '_blank');
+    });
+  };
+  updateLinks();
+
+  modal.querySelector('#wa-tpl').addEventListener('change', e => {
+    const tpl = WA_TEMPLATES.find(t => t.id === e.target.value);
+    if (tpl) { modal.querySelector('#wa-msg').value = tpl.text; updateLinks(); }
+  });
+  modal.querySelector('#wa-msg').addEventListener('input', updateLinks);
+  modal.querySelector('#btn-send-all').addEventListener('click', () => {
+    const msg = modal.querySelector('#wa-msg').value;
+    let delay = 0;
+    buildLinks(msg).forEach(({ href }) => {
+      if (href) { setTimeout(() => window.open(href, '_blank'), delay); delay += 400; }
+    });
+  });
+}
+
+function openClientImportModal() {
+  const TEMPLATE = 'Ad,Soyad,Telefon,E-posta,Müşteri Tipi,Öncelik,Segment,Bütçe Min,Bütçe Max,Tercih İlçe,Meslek,Notlar\nAhmet,Yılmaz,05551234567,ahmet@mail.com,buyer,medium,warm,1000000,2000000,Kadıköy,Mühendis,\n';
+  const body = `
+    <div class="import-guide">
+      <p>Şablonu indirip doldurun. Excel (.xlsx) veya CSV desteklenir.</p>
+      <button class="btn btn-sm btn-outline" id="btn-dl-tpl"><i data-lucide="download"></i> Şablonu İndir</button>
+    </div>
+    <div class="form-group" style="margin-top:1rem">
+      <label>Dosya Seçin (.xlsx veya .csv)</label>
+      <input type="file" id="import-file" accept=".xlsx,.xls,.csv" class="file-input">
+    </div>
+    <div id="import-preview" style="margin-top:.75rem"></div>
+    <div id="import-error" class="alert alert-danger" style="display:none;margin-top:.5rem"></div>
+  `;
+  const footer = `<button class="btn btn-primary" id="btn-do-import" disabled><i data-lucide="upload"></i> İçeri Aktar</button>`;
+  const modal = createModal('import-modal', 'Müşteri İçe Aktarma (Excel/CSV)', body, footer);
+  openModal('import-modal');
+  if (window.lucide) window.lucide.createIcons();
+
+  let parsedRows = [];
+  modal.querySelector('#btn-dl-tpl').addEventListener('click', () => {
+    const blob = new Blob(['\uFEFF' + TEMPLATE], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = 'musteri-sablonu.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+  modal.querySelector('#import-file').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const errEl = modal.querySelector('#import-error');
+    const preview = modal.querySelector('#import-preview');
+    const importBtn = modal.querySelector('#btn-do-import');
+    errEl.style.display = 'none'; preview.innerHTML = '';
+    try {
+      parsedRows = await parseImportFile(file);
+      if (!parsedRows.length) { errEl.textContent = 'Dosyada veri bulunamadı'; errEl.style.display = ''; return; }
+      const cols = Object.keys(parsedRows[0]);
+      preview.innerHTML = `<p class="import-preview-info">${parsedRows.length} kayıt bulundu (ilk 5 satır önizleme):</p>
+        <div class="table-wrapper" style="max-height:160px;overflow:auto">
+          <table class="table table-sm"><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead>
+          <tbody>${parsedRows.slice(0,5).map(r => `<tr>${cols.map(c => `<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table>
+        </div>`;
+      importBtn.disabled = false; importBtn.textContent = `İçeri Aktar (${parsedRows.length} müşteri)`;
+    } catch(err) { errEl.textContent = 'Dosya okunamadı: ' + err.message; errEl.style.display = ''; }
+  });
+  modal.querySelector('#btn-do-import').addEventListener('click', () => {
+    importClientsData(parsedRows); closeModal('import-modal');
+  });
+}
+
+function importClientsData(rows) {
+  const TYPE_MAP = { alıcı:'buyer', buyer:'buyer', satıcı:'seller', seller:'seller', kiracı:'tenant', tenant:'tenant' };
+  const PRI_MAP = { düşük:'low', low:'low', orta:'medium', medium:'medium', yüksek:'high', high:'high', acil:'urgent', urgent:'urgent' };
+  const SEG_MAP = { sıcak:'hot', hot:'hot', ılık:'warm', warm:'warm', soğuk:'cold', cold:'cold', kayıp:'lost', lost:'lost' };
+  const existing = getAll('clients');
+  const imported = rows.map(r => ({
+    id: uuid(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    firstName: r['Ad'] || r['firstName'] || '',
+    lastName: r['Soyad'] || r['lastName'] || '',
+    phone: r['Telefon'] || r['phone'] || '',
+    email: r['E-posta'] || r['email'] || '',
+    clientType: TYPE_MAP[(r['Müşteri Tipi']||r['clientType']||'').toLowerCase()] || 'buyer',
+    priorityLevel: PRI_MAP[(r['Öncelik']||r['priorityLevel']||'').toLowerCase()] || 'medium',
+    segment: SEG_MAP[(r['Segment']||r['segment']||'').toLowerCase()] || 'warm',
+    pipelineStage: 'lead', source: 'other',
+    budgetMin: parseFloat(r['Bütçe Min']||r['budgetMin']) || null,
+    budgetMax: parseFloat(r['Bütçe Max']||r['budgetMax']) || null,
+    preferredDistricts: r['Tercih İlçe'] ? r['Tercih İlçe'].split(',').map(s=>s.trim()).filter(Boolean) : [],
+    preferredNeighborhoods: [], desiredFeatures: [], desiredRoomCounts: [],
+    occupation: r['Meslek'] || null, notes: r['Notlar'] || r['notes'] || '',
+    matchWeights: { budget:40, location:30, squareMeters:15, roomCount:10, features:5 },
+    meetingHistory: [], shownPropertyIds: [], pipelineHistory: [], noteLog: [],
+  })).filter(c => c.firstName);
+  saveAll('clients', [...imported, ...existing]);
+  logActivity('client_add', `Excel'den ${imported.length} müşteri aktarıldı`);
+  showToast(`${imported.length} müşteri aktarıldı`);
+  renderList();
 }
 
 function addMeeting(clientId, listContainerId) {

@@ -92,6 +92,46 @@ export const FEATURE_OPTIONS = [
   { value: 'deniz', label: 'Deniz Manzarası' },
 ];
 
+export async function parseImportFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    let text = await file.text();
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    return parseCSVText(text);
+  }
+  if (ext === 'xlsx' || ext === 'xls') {
+    if (!window.XLSX) throw new Error('Excel kütüphanesi yüklenmedi. Sayfayı yenileyin veya CSV kullanın.');
+    const buf = await file.arrayBuffer();
+    const wb = window.XLSX.read(buf);
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    return window.XLSX.utils.sheet_to_json(ws, { defval: '' });
+  }
+  throw new Error('Desteklenmeyen format. .xlsx veya .csv kullanın.');
+}
+
+export function parseCSVText(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+  const headers = splitCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = splitCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] || '').trim(); });
+    return obj;
+  });
+}
+
+function splitCSVLine(line) {
+  const result = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    if (line[i] === '"') { inQ = !inQ; continue; }
+    if (line[i] === ',' && !inQ) { result.push(cur); cur = ''; continue; }
+    cur += line[i];
+  }
+  result.push(cur);
+  return result;
+}
+
 export function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs)) {
