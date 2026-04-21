@@ -1,8 +1,7 @@
 import { TR } from '../i18n.js';
-import { getAll } from '../storage.js';
+import { getAll, getSettings as getAppSettings } from '../storage.js';
 import { formatPrice, truncate } from '../utils.js';
 import { hasPermission } from '../auth.js';
-import { getSettings as getAppSettings } from '../storage.js';
 
 let mapInstance = null;
 

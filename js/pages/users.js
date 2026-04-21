@@ -1,7 +1,6 @@
 import { getUsers, createUser, updateUser, deleteUser, changePassword, defaultPermissions, PERMISSION_LABELS, isAdmin } from '../auth.js';
 import { createModal, openModal, closeModal } from '../components/modals.js';
-import { showToast, confirm } from '../utils.js';
-import { formatDate } from '../utils.js';
+import { showToast, confirm, formatDate } from '../utils.js';
 
 export function renderUsers(container) {
   if (!isAdmin()) {
