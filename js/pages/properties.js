@@ -381,7 +381,14 @@ function openPropertyForm(property) {
           </div>
         </div>
         <div class="form-row">
-          ${field('number', 'commissionRate', TR.property.commissionRate, property?.commissionRate)}
+          <div class="form-group">
+            <label>Hizmet Bedeli Oranı (%)</label>
+            <input type="number" name="commissionRate" value="${property?.commissionRate??''}" class="input-field" min="0" max="100" step="0.01" placeholder="Örn: 2.5">
+          </div>
+          <div class="form-group">
+            <label>Hizmet Bedeli Miktarı</label>
+            <input type="text" id="commission-amount" class="input-field" readonly placeholder="Otomatik hesaplanır" style="background:var(--color-bg-secondary);cursor:default">
+          </div>
         </div>
         <div class="form-row checkboxes">
           ${checkbox('creditEligible', TR.property.creditEligible, property?.creditEligible)}
@@ -423,6 +430,16 @@ function openPropertyForm(property) {
     if (currentStep > 0) { currentStep--; showStep(modal, currentStep, 3); if (window.lucide) window.lucide.createIcons(); }
   });
   modal.querySelector('.btn-save')?.addEventListener('click', () => saveProperty(modal, photoData, property?.id));
+
+  function updateCommissionAmount() {
+    const price = parseFloat(modal.querySelector('[name="price"]')?.value) || 0;
+    const rate  = parseFloat(modal.querySelector('[name="commissionRate"]')?.value) || 0;
+    const el = modal.querySelector('#commission-amount');
+    if (el) el.value = price > 0 && rate > 0 ? formatPrice(Math.round(price * rate / 100)) : '';
+  }
+  modal.querySelector('[name="commissionRate"]')?.addEventListener('input', updateCommissionAmount);
+  modal.querySelector('[name="price"]')?.addEventListener('input', updateCommissionAmount);
+  updateCommissionAmount();
 }
 
 function field(type, name, label, value = '', required = false) {
@@ -546,7 +563,8 @@ export function openPropertyDetail(id) {
             ${dRow('İmar', p.zoningStatus||'—')}
             ${dRow('Krediye Uygun', p.creditEligible?'Evet':'Hayır')}
             ${dRow('DASK', p.hasDASK?'Var':'Yok')}
-            ${dRow('Komisyon', p.commissionRate ? '%'+p.commissionRate : '—')}
+            ${dRow('Hizmet Bedeli Oranı', p.commissionRate ? '%' + p.commissionRate : '—')}
+            ${p.commissionRate && p.price ? dRow('Hizmet Bedeli Miktarı', formatPrice(Math.round(p.price * p.commissionRate / 100))) : ''}
             ${dRow('Cephe', p.facadeDirection||'—')}
             ${dRow('Eşya', p.furnishing||'—')}
           </div>
