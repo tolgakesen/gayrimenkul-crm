@@ -1,0 +1,15 @@
+{
+  "name": "gayrimenkul-crm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gayrimenkul danışmanı portföy ve müşteri yönetim sistemi",
+  "scripts": {
+    "lint": "eslint \"js/**/*.js\"",
+    "lint:html": "html-validate index.html",
+    "ci": "npm run lint && npm run lint:html"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "html-validate": "^8.25.0"
+  }
+}

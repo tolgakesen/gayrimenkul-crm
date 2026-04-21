@@ -12,7 +12,9 @@
       "Bash(git -C /c/claude/gun2 add js/pages/dashboard.js js/pages/properties.js js/pages/reminders.js css/main.css)",
       "Bash(git -C /c/claude/gun2 commit -m \"feat: stat cards navigate to relevant pages with filter on dashboard\")",
       "Bash(node *)",
-      "Bash(powershell.exe *)"
+      "Bash(powershell.exe *)",
+      "Bash(git -C C:/claude/gun2 add -A)",
+      "Bash(git -C C:/claude/gun2 status)"
     ]
   }
 }
