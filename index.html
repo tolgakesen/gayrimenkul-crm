@@ -23,9 +23,20 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <link rel="stylesheet" href="css/main.css?v=20260423">
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <link rel="stylesheet" href="css/main.css?v=20260424">
 </head>
 <body>
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="login-screen">
+    <div class="login-card" style="text-align:center;gap:1rem">
+      <div class="spinner" style="margin:0 auto"></div>
+      <p style="color:var(--color-text-muted);margin:0">Bağlanıyor...</p>
+    </div>
+  </div>
+
   <!-- Login Screen -->
   <div id="login-screen" class="login-screen" style="display:none">
     <div id="login-content"></div>
@@ -65,7 +76,7 @@
   <!-- SheetJS for Excel import -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-  <script type="module" src="js/app.js?v=20260423"></script>
+  <script type="module" src="js/app.js?v=20260424"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) window.lucide.createIcons();

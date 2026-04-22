@@ -1,29 +1,67 @@
-const KEYS = {
-  properties: 'gm_crm_properties',
-  clients: 'gm_crm_clients',
-  reminders: 'gm_crm_reminders',
-  settings: 'gm_crm_settings',
-  activity: 'gm_crm_activity',
+import { db } from './supabase-client.js';
+
+const TABLES = ['properties', 'clients', 'reminders', 'activity'];
+
+const cache = {
+  properties: [],
+  clients: [],
+  reminders: [],
+  activity: [],
+  settings: null,
 };
 
-export function getAll(key) {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS[key]) || '[]');
-  } catch { return []; }
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-export function saveAll(key, data) {
-  localStorage.setItem(KEYS[key], JSON.stringify(data));
+export async function initStorage() {
+  const results = await Promise.all(
+    TABLES.map(t => db.from(t).select('id, data'))
+  );
+  TABLES.forEach((key, i) => {
+    const { data, error } = results[i];
+    if (error) throw new Error(`"${key}" tablosu yüklenemedi: ${error.message}`);
+    cache[key] = (data || []).map(row => row.data).filter(Boolean);
+  });
+
+  const { data: sd, error: se } = await db
+    .from('app_settings').select('data').eq('id', 'global').maybeSingle();
+  if (se) throw new Error(`Ayarlar yüklenemedi: ${se.message}`);
+  cache.settings = sd?.data || null;
+}
+
+export function getAll(key) {
+  return cache[key] || [];
+}
+
+export function saveAll(key, arr) {
+  if (!TABLES.includes(key)) return;
+
+  const oldIds = new Set((cache[key] || []).map(x => x.id).filter(Boolean));
+  const newIds = new Set(arr.map(x => x.id).filter(Boolean));
+  cache[key] = [...arr];
+
+  if (arr.length > 0) {
+    db.from(key)
+      .upsert(arr.map(item => ({ id: item.id, data: item })))
+      .then(({ error }) => { if (error) console.error('Upsert hatası:', key, error); });
+  }
+
+  const removed = [...oldIds].filter(id => !newIds.has(id));
+  if (removed.length > 0) {
+    db.from(key).delete().in('id', removed)
+      .then(({ error }) => { if (error) console.error('Silme hatası:', key, error); });
+  }
 }
 
 export function getSettings() {
-  try {
-    return JSON.parse(localStorage.getItem(KEYS.settings) || 'null') || defaultSettings();
-  } catch { return defaultSettings(); }
+  return cache.settings || defaultSettings();
 }
 
 export function saveSettings(s) {
-  localStorage.setItem(KEYS.settings, JSON.stringify(s));
+  cache.settings = s;
+  db.from('app_settings').upsert({ id: 'global', data: s })
+    .then(({ error }) => { if (error) console.error('Ayar kayıt hatası:', error); });
 }
 
 function defaultSettings() {
@@ -34,18 +72,9 @@ function defaultSettings() {
 }
 
 export function getStorageUsagePct() {
-  try {
-    let total = 0;
-    for (const k of Object.values(KEYS)) {
-      const v = localStorage.getItem(k);
-      if (v) total += v.length;
-    }
-    // Assume 5MB limit
-    return Math.round((total / (5 * 1024 * 1024)) * 100);
-  } catch { return 0; }
+  return 0;
 }
 
-// Full backup export
 export function exportBackup() {
   return {
     version: 1,
@@ -57,7 +86,6 @@ export function exportBackup() {
   };
 }
 
-// Full backup import
 export function importBackup(data) {
   if (!data || data.version !== 1) throw new Error('invalid');
   saveAll('properties', data.properties || []);
@@ -66,9 +94,9 @@ export function importBackup(data) {
   if (data.settings) saveSettings(data.settings);
 }
 
-// Activity log
-export function logActivity(type, title, id) {
-  const log = getAll('activity');
-  log.unshift({ type, title, id, date: new Date().toISOString() });
-  saveAll('activity', log.slice(0, 50));
+export function logActivity(type, title, entityId) {
+  const entry = { id: uid(), type, title, entityId, date: new Date().toISOString() };
+  cache.activity = [entry, ...cache.activity].slice(0, 50);
+  db.from('activity').upsert({ id: entry.id, data: entry })
+    .then(({ error }) => { if (error) console.error('Aktivite kayıt hatası:', error); });
 }

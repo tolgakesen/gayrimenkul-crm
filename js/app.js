@@ -1,7 +1,7 @@
 import { renderSidebar, updateSidebarActive } from './components/sidebar.js';
-import { getSettings, saveSettings, getAll } from './storage.js';
+import { getSettings, saveSettings, getAll, initStorage } from './storage.js';
 import { checkReminders } from './pages/reminders.js';
-import { isLoggedIn, isAdmin, logout } from './auth.js';
+import { isLoggedIn, isAdmin, logout, initUsers } from './auth.js';
 
 async function loadPage(hash) {
   if (!isLoggedIn()) { showLoginScreen(); return; }
@@ -120,8 +120,10 @@ function attachSidebarEvents() {
     const overlay = document.getElementById('sidebar-overlay');
     const sidebar = document.getElementById('sidebar');
     if (sidebar.classList.contains('open')) {
-      const isInsideSidebar = sidebar.contains(e.target);
-      if (!isInsideSidebar) { sidebar.classList.remove('open'); overlay?.classList.remove('open'); }
+      if (!sidebar.contains(e.target)) {
+        sidebar.classList.remove('open');
+        overlay?.classList.remove('open');
+      }
     }
   });
 }
@@ -169,4 +171,22 @@ function initApp() {
   setInterval(updateNotificationBadge, 30000);
 }
 
-initApp();
+async function bootstrap() {
+  const loadingEl = document.getElementById('loading-screen');
+  try {
+    await Promise.all([initStorage(), initUsers()]);
+    loadingEl.style.display = 'none';
+    initApp();
+  } catch (err) {
+    loadingEl.innerHTML = `
+      <div class="login-card" style="text-align:center;gap:1rem">
+        <i data-lucide="wifi-off" style="width:48px;height:48px;color:var(--color-danger);margin:0 auto"></i>
+        <h2 style="margin:0">Bağlantı Hatası</h2>
+        <p style="color:var(--color-text-muted);margin:0">${err.message}</p>
+        <button type="button" class="btn btn-primary" onclick="location.reload()">Yeniden Dene</button>
+      </div>`;
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+bootstrap();
