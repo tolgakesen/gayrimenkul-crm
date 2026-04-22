@@ -173,6 +173,31 @@ img { max-width: 100%; }
 
 .topbar-spacer { flex: 1; }
 
+.topbar-info {
+  display: flex; flex-direction: column; align-items: flex-end;
+  gap: .1rem; line-height: 1.2;
+  margin-right: .25rem; padding-right: .75rem;
+  border-right: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+.topbar-kur {
+  display: flex; align-items: center; gap: .25rem;
+  font-size: .68rem; white-space: nowrap;
+}
+.kur-item { display: flex; align-items: center; gap: .18rem; }
+.kur-lbl { font-size: .62rem; font-weight: 600; color: var(--color-text-muted); }
+.kur-item span:last-child {
+  font-weight: 700; color: var(--color-success);
+  font-variant-numeric: tabular-nums;
+}
+.kur-dot { color: var(--color-border); }
+.topbar-weather {
+  display: flex; align-items: center; gap: .2rem;
+  font-size: .68rem; color: var(--color-text-muted); white-space: nowrap;
+}
+#wx-temp { font-weight: 600; color: var(--color-text); }
+#wx-city { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+
 .topbar-clock {
   display: flex; flex-direction: column; align-items: flex-end;
   gap: .05rem; margin-right: .5rem; line-height: 1.2;
@@ -925,6 +950,7 @@ img { max-width: 100%; }
   #sidebar.open { transform: translateX(0); }
   #topbar { left: 0; padding: 0 1rem; }
   .topbar-menu-btn { display: flex; align-items: center; }
+  .topbar-info { display: none; }
   #main-wrapper { margin-left: 0; padding: 1rem; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .dashboard-grid { grid-template-columns: 1fr; }
@@ -1388,3 +1414,7 @@ img { max-width: 100%; }
 .import-guide { background: var(--bg-hover); border-radius: var(--radius-sm); padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .import-guide p { margin: 0; font-size: 0.85rem; color: var(--color-text-muted); }
 .import-preview-info { font-size: 0.82rem; color: var(--color-text-muted); margin-bottom: 0.4rem; }
+.commission-cell { display: flex; align-items: center; gap: 2px; }
+.input-commission-rate { width: 60px; padding: 2px 4px; font-size: .82rem; text-align: right; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); color: var(--color-text); }
+.input-commission-rate:focus { outline: none; border-color: var(--color-primary); }
+.commission-amount-cell { font-size: .82rem; color: var(--color-success); font-weight: 600; white-space: nowrap; }
