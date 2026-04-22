@@ -1,10 +1,10 @@
 import { renderSidebar, updateSidebarActive } from './components/sidebar.js';
 import { getSettings, saveSettings, getAll } from './storage.js';
 import { checkReminders } from './pages/reminders.js';
-import { isLoggedIn, isGuest, isAdmin, logout, startGuestSession } from './auth.js';
+import { isLoggedIn, isAdmin, logout } from './auth.js';
 
 async function loadPage(hash) {
-  if (!isLoggedIn()) { startGuestSession(); }
+  if (!isLoggedIn()) { showLoginScreen(); return; }
 
   const main = document.getElementById('main-content');
   if (!main) return;
@@ -92,27 +92,20 @@ function initNotifications() {
   }
 }
 
-async function showAdminLoginModal() {
-  const { createModal, openModal, closeModal } = await import('./components/modals.js');
+async function showLoginScreen() {
+  document.getElementById('app-shell').style.display = 'none';
+  const loginScreen = document.getElementById('login-screen');
+  loginScreen.style.display = '';
   const { renderLogin } = await import('./pages/login.js');
-
-  const modal = createModal('admin-login-modal', 'Kullanıcı Girişi',
-    '<div id="admin-login-content"></div>');
-  openModal('admin-login-modal');
-
-  renderLogin(document.getElementById('admin-login-content'), () => {
-    closeModal('admin-login-modal');
+  renderLogin(document.getElementById('login-content'), () => {
+    loginScreen.style.display = 'none';
+    document.getElementById('app-shell').style.display = '';
     renderSidebar();
     attachSidebarEvents();
-    updateAdminBtn();
     loadPage(location.hash);
+    setInterval(checkReminders, 60000);
+    setInterval(updateNotificationBadge, 30000);
   });
-}
-
-function updateAdminBtn() {
-  const btn = document.getElementById('btn-admin-login');
-  if (!btn) return;
-  btn.style.display = isGuest() ? '' : 'none';
 }
 
 function attachSidebarEvents() {
@@ -120,11 +113,7 @@ function attachSidebarEvents() {
     const logoutBtn = e.target.closest('#btn-logout');
     if (logoutBtn) {
       logout();
-      startGuestSession();
-      renderSidebar();
-      attachSidebarEvents();
-      updateAdminBtn();
-      loadPage(location.hash);
+      showLoginScreen();
       return;
     }
 
@@ -142,9 +131,6 @@ function initApp() {
   initNotifications();
 
   document.addEventListener('click', e => {
-    const adminLoginBtn = e.target.closest('#btn-admin-login');
-    if (adminLoginBtn) { showAdminLoginModal(); return; }
-
     const toggle = e.target.closest('#theme-toggle');
     if (toggle) {
       const settings = getSettings();
@@ -169,13 +155,15 @@ function initApp() {
 
   window.addEventListener('hashchange', () => loadPage(location.hash));
 
-  if (!isLoggedIn()) startGuestSession();
+  if (!isLoggedIn()) {
+    showLoginScreen();
+    return;
+  }
 
   document.getElementById('app-shell').style.display = '';
   document.getElementById('login-screen').style.display = 'none';
   renderSidebar();
   attachSidebarEvents();
-  updateAdminBtn();
   loadPage(location.hash);
   setInterval(checkReminders, 60000);
   setInterval(updateNotificationBadge, 30000);
