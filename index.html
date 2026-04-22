@@ -28,7 +28,7 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-  <link rel="stylesheet" href="css/main.css?v=20260425">
+  <link rel="stylesheet" href="css/main.css?v=20260426">
 </head>
 <body>
   <!-- Loading Screen -->
@@ -63,11 +63,6 @@
             <span class="kur-item"><span class="kur-lbl">USD</span><span id="kur-usd">—</span></span>
             <span class="kur-dot">·</span>
             <span class="kur-item"><span class="kur-lbl">EUR</span><span id="kur-eur">—</span></span>
-          </div>
-          <div class="topbar-weather">
-            <span id="wx-icon"></span>
-            <span id="wx-temp">—</span>
-            <span id="wx-city"></span>
           </div>
         </div>
         <div class="topbar-clock" id="topbar-clock">
@@ -127,55 +122,8 @@
           } catch(e) { console.warn('Kur API', i, 'başarısız:', e.message); }
         }
       }
-      var WMO = {
-        0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
-        45:'🌫️',48:'🌫️',
-        51:'🌦️',53:'🌦️',55:'🌦️',
-        61:'🌧️',63:'🌧️',65:'🌧️',
-        71:'🌨️',73:'🌨️',75:'❄️',77:'🌨️',
-        80:'🌦️',81:'🌧️',82:'⛈️',
-        85:'🌨️',86:'❄️',
-        95:'⛈️',96:'⛈️',99:'⛈️'
-      };
-      async function fetchWeather(lat, lon, cityHint) {
-        try {
-          var wr = await fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,weather_code');
-          var wd = await wr.json();
-          var city = cityHint || '';
-          if (!city) {
-            try {
-              var gr = await fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lon+'&format=json&accept-language=tr');
-              var gd = await gr.json();
-              city = (gd.address && (gd.address.city || gd.address.town || gd.address.county)) || '';
-            } catch(e) {}
-          }
-          var temp = Math.round(wd.current.temperature_2m);
-          var icon = WMO[wd.current.weather_code] || '🌡️';
-          var wxIcon = document.getElementById('wx-icon');
-          var wxTemp = document.getElementById('wx-temp');
-          var wxCity = document.getElementById('wx-city');
-          if (wxIcon) wxIcon.textContent = icon;
-          if (wxTemp) wxTemp.textContent = temp + '°C';
-          if (wxCity) wxCity.textContent = city;
-        } catch(e) { console.warn('Hava durumu alınamadı:', e.message); }
-      }
-      function initLocation() {
-        function onGeoSuccess(p) { fetchWeather(p.coords.latitude, p.coords.longitude, null); }
-        function onGeoError() {
-          fetch('https://ipapi.co/json/')
-            .then(function(r){ return r.json(); })
-            .then(function(d){ if (d.latitude) fetchWeather(d.latitude, d.longitude, d.city); })
-            .catch(function(e){ console.warn('IP konum alınamadı:', e.message); });
-        }
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(onGeoSuccess, onGeoError, { timeout: 6000 });
-        } else {
-          onGeoError();
-        }
-      }
       fetchRates();
       setInterval(fetchRates, 5 * 60 * 1000);
-      initLocation();
     })();
 
     (function initTopbarClock() {
