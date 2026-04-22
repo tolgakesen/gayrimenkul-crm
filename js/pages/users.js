@@ -1,20 +1,20 @@
-import { getUsers, createUser, updateUser, deleteUser, changePassword, defaultPermissions, PERMISSION_LABELS, isAdmin } from '../auth.js';
+import { getUsers, createUser, updateUser, deleteUser, changePassword, defaultPermissions, PERMISSION_LABELS, isAdmin, isGuest } from '../auth.js';
 import { createModal, openModal, closeModal } from '../components/modals.js';
 import { showToast, confirm, formatDate } from '../utils.js';
 
 export function renderUsers(container) {
-  if (!isAdmin()) {
-    container.innerHTML = `<div class="error-state"><i data-lucide="shield-off"></i><p>Bu sayfaya erişim yetkiniz yok.</p></div>`;
+  if (isGuest()) {
+    container.innerHTML = `<div class="error-state"><i data-lucide="shield-off"></i><p>Bu sayfaya erişim için giriş yapmanız gerekiyor.</p></div>`;
     if (window.lucide) window.lucide.createIcons();
     return;
   }
-
+  const admin = isAdmin();
   const users = getUsers();
 
   container.innerHTML = `
     <div class="page-header">
-      <h1 class="page-title">Kullanıcı Yönetimi</h1>
-      <button class="btn btn-primary" id="btn-add-user"><i data-lucide="user-plus"></i> Yeni Kullanıcı</button>
+      <h1 class="page-title">Kullanıcılar</h1>
+      ${admin ? `<button class="btn btn-primary" id="btn-add-user"><i data-lucide="user-plus"></i> Yeni Kullanıcı</button>` : ''}
     </div>
     <div class="card users-card">
       <div class="users-table-wrap">
@@ -26,7 +26,7 @@ export function renderUsers(container) {
               <th>Rol</th>
               <th>Durum</th>
               <th>Oluşturulma</th>
-              <th></th>
+              ${admin ? '<th></th>' : ''}
             </tr>
           </thead>
           <tbody>
@@ -41,11 +41,11 @@ export function renderUsers(container) {
                   ? '<span class="badge badge-success">Aktif</span>'
                   : '<span class="badge badge-secondary">Pasif</span>'}</td>
                 <td class="text-muted">${formatDate(u.createdAt)}</td>
-                <td class="user-actions">
+                ${admin ? `<td class="user-actions">
                   <button class="btn btn-sm btn-ghost btn-edit-user" data-id="${u.id}" title="Düzenle"><i data-lucide="pencil"></i></button>
                   <button class="btn btn-sm btn-ghost btn-pwd-user" data-id="${u.id}" title="Şifre Değiştir"><i data-lucide="key"></i></button>
                   ${u.role !== 'admin' ? `<button class="btn btn-sm btn-ghost btn-delete-user" data-id="${u.id}" title="Sil"><i data-lucide="trash-2"></i></button>` : ''}
-                </td>
+                </td>` : ''}
               </tr>
             `).join('')}
           </tbody>
@@ -55,6 +55,8 @@ export function renderUsers(container) {
   `;
 
   if (window.lucide) window.lucide.createIcons();
+
+  if (!admin) return;
 
   container.querySelector('#btn-add-user').addEventListener('click', () => openUserForm(null, () => renderUsers(container)));
 
