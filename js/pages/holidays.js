@@ -1,4 +1,4 @@
-import { isAdmin } from '../auth.js';
+import { isAdmin, hasPermission } from '../auth.js';
 import { getAll } from '../storage.js';
 
 const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -171,7 +171,7 @@ function findRelatedClients(h, clients) {
 // ── Render ───────────────────────────────────────────────────────────────────
 
 export function renderHolidays(container) {
-  if (!isAdmin()) {
+  if (!hasPermission('holidays', 'view')) {
     container.innerHTML = `<div class="error-state"><i data-lucide="shield-off"></i><p>Bu sayfaya erişim yetkiniz yok.</p></div>`;
     if (window.lucide) window.lucide.createIcons();
     return;

@@ -186,6 +186,7 @@ export function defaultPermissions() {
     map: { view: true },
     reports: { view: false },
     settings: { view: false },
+    holidays: { view: false },
   };
 }
 
@@ -209,4 +210,5 @@ export const PERMISSION_LABELS = {
   map: { label: 'Harita', actions: { view: 'Görüntüle' } },
   reports: { label: 'Raporlar', actions: { view: 'Görüntüle' } },
   settings: { label: 'Ayarlar', actions: { view: 'Görüntüle' } },
+  holidays: { label: 'Özel Günler', actions: { view: 'Görüntüle' } },
 };

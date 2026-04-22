@@ -1,5 +1,5 @@
 import { TR } from '../i18n.js';
-import { getCurrentUser, isAdmin, isGuest } from '../auth.js';
+import { getCurrentUser, isAdmin, isGuest, hasPermission } from '../auth.js';
 
 const ROUTES = [
   { hash: '#/', icon: 'layout-dashboard', label: TR.nav.dashboard },
@@ -13,7 +13,7 @@ const ROUTES = [
   { hash: '#/reports',     icon: 'bar-chart-2',   label: 'Raporlar' },
   { hash: '#/settings',    icon: 'settings',      label: TR.nav.settings },
   { hash: '#/users',        icon: 'user-cog',      label: 'Kullanıcılar',  noGuest: true },
-  { hash: '#/holidays',    icon: 'calendar-heart', label: 'Özel Günler',   adminOnly: true },
+  { hash: '#/holidays',    icon: 'calendar-heart', label: 'Özel Günler',   noGuest: true, permModule: 'holidays' },
   { hash: '#/world-clocks',icon: 'clock-4',        label: 'Dünya Saati',   adminOnly: true },
 ];
 
@@ -26,7 +26,11 @@ export function renderSidebar() {
   const admin = isAdmin();
 
   const guest = isGuest();
-  const routes = ROUTES.filter(r => (!r.adminOnly || admin) && (!r.noGuest || !guest));
+  const routes = ROUTES.filter(r =>
+    (!r.adminOnly || admin) &&
+    (!r.noGuest || !guest) &&
+    (!r.permModule || admin || hasPermission(r.permModule, 'view'))
+  );
 
   aside.innerHTML = `
     <a href="#/" class="sidebar-brand">
