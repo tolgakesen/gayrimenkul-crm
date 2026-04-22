@@ -28,7 +28,7 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
-  <link rel="stylesheet" href="css/main.css?v=20260426">
+  <link rel="stylesheet" href="css/main.css?v=20260427">
 </head>
 <body>
   <!-- Loading Screen -->
@@ -91,36 +91,34 @@
       if (window.lucide) window.lucide.createIcons();
     });
     (function initTopbarInfo() {
-      var RATE_APIS = [
-        'https://open.er-api.com/v6/latest/USD',
-        'https://api.frankfurter.app/latest?from=USD&to=TRY,EUR'
-      ];
+      console.log('[KUR] 1-iife çalıştı');
+      var uEl = document.getElementById('kur-usd');
+      var eEl = document.getElementById('kur-eur');
+      console.log('[KUR] 2-elementler:', uEl, eEl);
+
       async function fetchRates() {
-        for (var i = 0; i < RATE_APIS.length; i++) {
-          try {
-            var res = await fetch(RATE_APIS[i]);
-            var d = await res.json();
-            var usdTry, eurTry;
-            if (d.rates && d.rates.TRY && d.rates.EUR) {
-              usdTry = d.rates.TRY;
-              eurTry = d.rates.TRY / d.rates.EUR;
-            } else if (d.rates && d.rates.TRY && !d.rates.EUR) {
-              usdTry = d.rates.TRY;
-              try {
-                var res2 = await fetch('https://api.frankfurter.app/latest?from=EUR&to=TRY');
-                var d2 = await res2.json();
-                eurTry = d2.rates && d2.rates.TRY;
-              } catch(e2) {}
-            }
-            if (usdTry) {
-              var uEl = document.getElementById('kur-usd');
-              var eEl = document.getElementById('kur-eur');
-              if (uEl) uEl.textContent = Number(usdTry).toFixed(2);
-              if (eEl && eurTry) eEl.textContent = Number(eurTry).toFixed(2);
-              return;
-            }
-          } catch(e) { console.warn('Kur API', i, 'başarısız:', e.message); }
-        }
+        console.log('[KUR] 3-fetch başlıyor');
+        try {
+          var res = await fetch('https://api.frankfurter.app/latest?from=USD&to=TRY,EUR');
+          var d = await res.json();
+          console.log('[KUR] 4-frankfurter yanıtı:', d);
+          if (d.rates && d.rates.TRY) {
+            uEl.textContent = d.rates.TRY.toFixed(2);
+            eEl.textContent = (d.rates.TRY / d.rates.EUR).toFixed(2);
+            console.log('[KUR] 5-güncellendi:', uEl.textContent, eEl.textContent);
+            return;
+          }
+        } catch(e) { console.error('[KUR] frankfurter hata:', e); }
+        try {
+          var res2 = await fetch('https://open.er-api.com/v6/latest/USD');
+          var d2 = await res2.json();
+          console.log('[KUR] 4b-openER yanıtı:', d2.result, 'TRY:', d2.rates && d2.rates.TRY);
+          if (d2.rates && d2.rates.TRY) {
+            uEl.textContent = d2.rates.TRY.toFixed(2);
+            eEl.textContent = (d2.rates.TRY / d2.rates.EUR).toFixed(2);
+            console.log('[KUR] 5b-güncellendi:', uEl.textContent, eEl.textContent);
+          }
+        } catch(e2) { console.error('[KUR] openER hata:', e2); }
       }
       fetchRates();
       setInterval(fetchRates, 5 * 60 * 1000);
